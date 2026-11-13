@@ -100,7 +100,7 @@ button,select,input{font-family:inherit}
   </sc-if>
 
   <section id="closet" style="scroll-margin-top:80px;">
-    <div style="max-width:1320px;margin:0 auto;padding:clamp(48px,7vw,96px) clamp(16px,4vw,48px);display:flex;flex-direction:column;gap:36px;">
+    <div style="max-width:1680px;margin:0 auto;padding:clamp(48px,7vw,96px) clamp(8px,2.5vw,40px);display:flex;flex-direction:column;gap:36px;">
       <sc-if value="{{ isHome }}">
         <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
           <span style="font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:#8B4A2B;">— ✦ O closet ✦ —</span>
@@ -143,10 +143,10 @@ button,select,input{font-family:inherit}
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:{{ gridCols }};gap:clamp(28px,3vw,44px) clamp(12px,2vw,28px);">
+      <div style="display:grid;grid-template-columns:{{ gridCols }};gap:clamp(24px,3vw,40px) clamp(6px,1vw,16px);">
         <sc-for list="{{ cards }}" as="c">
           <article onClick="{{ c.open }}" style="cursor:pointer;display:flex;flex-direction:column;gap:14px;opacity:{{ c.opacity }};transition:transform .3s ease;" style-hover="transform:translateY(-3px)">
-            <div style="position:relative;aspect-ratio:3/4;overflow:hidden;background:#EADCC8;border-radius:8px;">
+            <div style="position:relative;aspect-ratio:2/3;overflow:hidden;background:#EADCC8;border-radius:4px;">
               <sc-if value="{{ c.hasCover }}">
                 <img loading="lazy" decoding="async" src="{{ c.cover }}" alt="{{ c.name }}" style="width:100%;height:100%;object-fit:cover;display:block;">
               </sc-if>
@@ -476,7 +476,7 @@ class Component extends DCLogic {
       hasFilter: pub.length > 0,
       emptyTitle: pub.length ? 'Ops, nada por aqui nesse filtro.' : 'Peças novas chegando em breve.',
       emptyText: pub.length ? 'Tenta outro tamanho ou categoria.' : 'O closet está sendo preparado. Volta logo!', clearFilters: () => this.setState({ cat: 'Todas', size: 'Todos' }),
-      gridCols: st.w < 560 ? 'repeat(2,minmax(0,1fr))' : 'repeat(auto-fill,minmax(240px,1fr))',
+      gridCols: st.w < 900 ? 'repeat(2,minmax(0,1fr))' : st.w < 1280 ? 'repeat(3,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))',
       hasOpen: !!op, closeProduct: () => this.setState({ openId: null }), stop: e => e.stopPropagation(),
       modalPad: mobile ? '0' : '32px', modalH: mobile ? '100%' : 'auto', modalRadius: mobile ? '0' : 'var(--radius-lg)', closePos: mobile ? 'fixed' : 'absolute',
       p: op ? { name: op.name, brand: op.brand, priceStr: brl(op.price), description: op.description, hasStatus: !!osi, statusLabel: osi ? osi[0] : '', statusColor: osi ? osi[1] : '' } : {},

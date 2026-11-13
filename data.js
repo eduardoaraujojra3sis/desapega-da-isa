@@ -75,7 +75,7 @@ export function nextCode(products) {
   return 'DI-' + String(n).padStart(3, '0');
 }
 
-export function compressImage(file, max = 1100, q = 0.8) {
+export function compressImage(file, max = 1600, q = 0.85) {
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onerror = rej;
