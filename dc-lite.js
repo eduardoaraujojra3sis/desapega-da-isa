@@ -1,5 +1,5 @@
 // Mini-runtime: transforma os templates (sc-if / sc-for / {{ }}) em componentes Preact.
-import { h, render, Component } from './vendor/preact-htm.js';
+import { h, render, Component } from './preact-htm.js';
 
 export class DCLogic extends Component {
   render() { return toVNodes(this.constructor.__tpl, [this.renderVals()]); }

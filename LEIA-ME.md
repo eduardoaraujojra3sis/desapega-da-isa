@@ -1,13 +1,13 @@
 # Desapega da Isa: site pronto para publicar
 
-Site estático, sem etapa de build. Arquivos:
+Site estático, sem etapa de build. Todos os arquivos ficam juntos na mesma pasta (sem subpastas):
 
 - `index.html`: a loja
 - `painel.html`: a área da Isa (login com o e-mail e a senha do Supabase)
-- `js/config.js`: endereço e chave pública do Supabase
-- `js/data.js`: leitura e gravação no Supabase
-- `js/dc-lite.js` e `js/vendor/`: o motor das páginas (Preact, já incluído, sem CDN)
-- `css/painel.css`: estilos do painel
+- `config.js`: endereço e chave pública do Supabase
+- `data.js`: leitura e gravação no Supabase
+- `dc-lite.js` e `preact-htm.js`: o motor das páginas
+- `painel.css`: estilos do painel
 
 ## Publicar no Netlify
 
@@ -32,7 +32,7 @@ O painel agora mostra o motivo exato do erro:
 
 - **"E-mail ou senha incorretos"**: em Authentication › Users, use "Reset password" ou crie o usuário de novo.
 - **"E-mail ainda não foi confirmado"**: confirme o e-mail pelo link recebido ou crie o usuário com **Auto Confirm User** marcado.
-- **"Não consegui conectar ao Supabase"**: confira a internet e os dados em `js/config.js` (Project Settings › API).
+- **"Não consegui conectar ao Supabase"**: confira a internet e os dados em `config.js` (Project Settings › API).
 
 O banco precisa ter isto (rode no SQL Editor, caso ainda não tenha feito):
 

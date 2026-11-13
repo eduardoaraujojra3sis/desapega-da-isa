@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rye&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/painel.css">
+<link rel="stylesheet" href="painel.css">
 </head>
 <body>
 <div id="app"></div>
@@ -250,10 +250,10 @@
 </script>
 
 <script type="module">
-import { DCLogic, mount } from './js/dc-lite.js';
+import { DCLogic, mount } from './dc-lite.js';
 
 const LOGIN_MSGS = {
-  rede: 'Não consegui conectar ao Supabase. Confira sua internet e o endereço em js/config.js.',
+  rede: 'Não consegui conectar ao Supabase. Confira sua internet e o endereço em config.js.',
   confirmar: 'Esse e-mail ainda não foi confirmado no Supabase (Authentication › Users).',
   credenciais: 'E-mail ou senha incorretos. Tenta de novo?'
 };
@@ -261,7 +261,7 @@ const LOGIN_MSGS = {
 class Component extends DCLogic {
   state = { data: null, authed: sessionStorage.getItem('isa-admin-ok') === '1' || !!sessionStorage.getItem('isa-admin-token'), token: sessionStorage.getItem('isa-admin-token') || '', email: '', busy: false, pw: '', pwErr: '', tab: 'pecas', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {} };
   async componentDidMount() {
-    this.m = await import(new URL('js/data.js', document.baseURI).href);
+    this.m = await import(new URL('data.js', document.baseURI).href);
     if (this.m.remote && !this.state.token) { sessionStorage.removeItem('isa-admin-ok'); this.setState({ authed: false }); }
     if (!this.m.remote && !sessionStorage.getItem('isa-admin-ok')) this.setState({ authed: false });
     const data = this.m.remote ? (this.m.cached() || this.m.load()) : this.m.load();

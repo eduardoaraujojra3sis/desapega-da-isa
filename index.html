@@ -365,12 +365,12 @@ button,select,input{font-family:inherit}
 </script>
 
 <script type="module">
-import { DCLogic, mount } from './js/dc-lite.js';
+import { DCLogic, mount } from './dc-lite.js';
 
 class Component extends DCLogic {
   state = { data: null, cart: [], cat: 'Todas', size: 'Todos', sort: 'recentes', openId: null, img: 0, cartOpen: false, name: '', w: window.innerWidth, toast: '', veil: 'on' };
   async componentDidMount() {
-    this.m = await import(new URL('js/data.js', document.baseURI).href);
+    this.m = await import(new URL('data.js', document.baseURI).href);
     const apply = data => {
       const ok = new Set(data.products.filter(p => p.status === 'disponivel').map(p => p.id));
       const cart = this.m.loadCart().filter(id => ok.has(id));
