@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painel · Desapega da Isa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/painel.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/x-dc-template" id="dc-template">
+<div style="min-height:100vh;background:var(--color-bg);font-family:var(--font-body);color:var(--color-text);">
+
+  <sc-if value="{{ needLogin }}">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;animation:isaFade .4s ease both;">
+      <form onSubmit="{{ login }}" style="width:min(400px,100%);display:flex;flex-direction:column;gap:var(--space-4);border:1px solid var(--color-divider);padding:clamp(28px,5vw,48px);">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-accent-700);">Área da Isa</span>
+          <span style="font-family:var(--font-heading);font-style:italic;font-size:36px;line-height:1.1;">{{ storeName }}</span>
+        </div>
+        <sc-if value="{{ isRemote }}">
+          <div class="field">
+            <label>E-mail</label>
+            <input class="input" type="email" autocomplete="username" value="{{ email }}" onChange="{{ onEmail }}" placeholder="isa@email.com" style="min-height:44px;">
+          </div>
+        </sc-if>
+        <div class="field">
+          <label>Senha</label>
+          <input class="input" type="password" autocomplete="current-password" value="{{ pw }}" onChange="{{ onPw }}" placeholder="••••••" style="min-height:44px;">
+        </div>
+        <sc-if value="{{ pwErr }}"><span style="font-size:13px;color:var(--color-accent-700);">{{ pwErr }}</span></sc-if>
+        <button type="submit" class="btn btn-primary" style="font-size:17px;padding:12px;">{{ loginLabel }}</button>
+        <sc-if value="{{ isLocal }}"><span style="font-size:12px;color:var(--color-neutral-700);">Modo demonstração · senha inicial: isa123 — troque em Configurações › Segurança.</span></sc-if>
+        <sc-if value="{{ isRemote }}"><span style="font-size:12px;color:var(--color-neutral-700);">Use o e-mail e a senha cadastrados no Supabase.</span></sc-if>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ authed }}">
+    <header style="animation:isaFade .35s ease both;border-bottom:1px solid var(--color-divider);position:sticky;top:0;z-index:20;background:var(--color-bg);">
+      <div style="max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,40px);min-height:68px;display:flex;align-items:center;gap:16px 24px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:baseline;gap:12px;margin-right:auto;">
+          <span style="font-family:var(--font-heading);font-style:italic;font-size:26px;">{{ storeName }}</span>
+          <span style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-accent-700);">Painel</span>
+        </div>
+        <a href="./" target="_blank" class="btn btn-secondary" style="font-size:14px;white-space:nowrap;">Ver loja ↗</a>
+        <button onClick="{{ logout }}" class="btn btn-ghost" style="font-size:14px;color:var(--color-accent-700);">Sair</button>
+      </div>
+      <div style="max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,40px);display:flex;gap:28px;">
+        <sc-for list="{{ tabs }}" as="t">
+          <button onClick="{{ t.pick }}" style="background:none;border:0;border-bottom:2px solid {{ t.line }};padding:12px 0;font-family:var(--font-heading);font-weight:600;font-size:18px;color:{{ t.color }};cursor:pointer;">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <main style="animation:isaFade .45s ease both;max-width:1200px;margin:0 auto;padding:clamp(24px,4vw,48px) clamp(16px,4vw,40px) 96px;">
+
+      <sc-if value="{{ tabPecas }}">
+        <div style="display:flex;flex-direction:column;gap:var(--space-6);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <h1 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(32px,4vw,44px);margin:0;line-height:1.05;">Suas peças</h1>
+              <span style="font-size:14px;color:var(--color-neutral-700);">Tudo que você mudar aqui aparece na loja na hora.</span>
+            </div>
+            <button onClick="{{ newProduct }}" class="btn btn-primary" style="font-size:16px;padding:12px 22px;white-space:nowrap;">+ Nova peça</button>
+          </div>
+
+          <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+              <sc-for list="{{ filters }}" as="f">
+                <button onClick="{{ f.pick }}" class="btn" style="font-family:var(--font-body);font-weight:400;font-size:13px;padding:7px 14px;border-radius:999px;border:1px solid {{ f.border }};color:{{ f.color }};background:{{ f.bg }};gap:8px;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ f.dot }};display:{{ f.dotDisplay }};"></span>{{ f.label }} <span style="font-feature-settings:'tnum';opacity:.7;">{{ f.n }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <input class="input" value="{{ q }}" onChange="{{ onQ }}" placeholder="Buscar por nome, marca ou código" style="margin-left:auto;width:min(300px,100%);min-height:40px;">
+          </div>
+
+          <div style="border-top:1px solid var(--color-divider);">
+            <sc-for list="{{ rows }}" as="r">
+              <div style="display:grid;grid-template-columns:{{ rowCols }};gap:var(--space-3) var(--space-4);align-items:center;padding:var(--space-3) 0;border-bottom:1px solid var(--color-divider);">
+                <div onClick="{{ r.edit }}" style="width:56px;height:72px;background:var(--color-surface);position:relative;overflow:hidden;cursor:pointer;outline:1px solid var(--color-divider);">
+                  <sc-if value="{{ r.hasCover }}"><img src="{{ r.cover }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></sc-if>
+                  <sc-if value="{{ r.noCover }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#e8e6e5 0 7px,#e2e0df 7px 14px);"></div></sc-if>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+                  <span style="font-family:var(--font-heading);font-weight:600;font-size:19px;line-height:1.2;">{{ r.name }}</span>
+                  <span style="font-size:13px;color:var(--color-neutral-700);">{{ r.meta }}</span>
+                  <span style="font-size:14px;font-feature-settings:'tnum';">{{ r.price }}</span>
+                </div>
+                <div style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;grid-column:{{ ctrlCol }};justify-content:flex-end;">
+                  <div style="position:relative;display:flex;align-items:center;">
+                    <span style="position:absolute;left:11px;width:8px;height:8px;border-radius:50%;background:{{ r.dot }};pointer-events:none;"></span>
+                    <select value="{{ r.status }}" onChange="{{ r.setStatus }}" class="input" style="width:auto;padding-left:28px;min-width:150px;min-height:40px;">
+                      <sc-for list="{{ statusOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+                    </select>
+                  </div>
+                  <button onClick="{{ r.edit }}" class="btn btn-secondary" style="min-height:40px;">Editar</button>
+                  <button onClick="{{ r.remove }}" class="btn btn-ghost" style="min-height:40px;color:var(--color-accent-700);">Excluir</button>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noRows }}">
+              <div style="padding:48px 0;text-align:center;font-size:15px;color:var(--color-neutral-700);">Nenhuma peça encontrada.</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabLoja }}">
+        <div style="display:flex;flex-direction:column;gap:var(--space-6);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <h1 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(32px,4vw,44px);margin:0;line-height:1.05;">Configurações da loja</h1>
+              <span style="font-size:14px;color:var(--color-neutral-700);">Textos, fotos, contato, categorias e senha.</span>
+            </div>
+            <button onClick="{{ saveSettings }}" class="btn btn-primary" style="font-size:16px;padding:12px 22px;">Salvar alterações</button>
+          </div>
+
+          <sc-for list="{{ groups }}" as="g">
+            <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:var(--space-4) var(--space-8);border-top:1px solid var(--color-divider);padding-top:var(--space-6);">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <h2 style="font-family:var(--font-heading);font-weight:600;font-size:22px;margin:0;">{{ g.title }}</h2>
+                <span style="font-size:13px;color:var(--color-neutral-700);line-height:1.5;">{{ g.desc }}</span>
+              </div>
+              <div style="grid-column:span {{ g.span }};display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:var(--space-4);">
+                <sc-for list="{{ g.fields }}" as="f">
+                  <label style="display:flex;flex-direction:column;gap:6px;grid-column:{{ f.col }};">
+                    <span style="font-size:12px;color:var(--color-neutral-700);">{{ f.label }}</span>
+                    <sc-if value="{{ f.isText }}"><input class="input" type="{{ f.inputType }}" value="{{ f.value }}" placeholder="{{ f.ph }}" onChange="{{ f.on }}" style="min-height:42px;"></sc-if>
+                    <sc-if value="{{ f.isArea }}"><textarea class="input" rows="4" value="{{ f.value }}" onChange="{{ f.on }}"></textarea></sc-if>
+                    <sc-if value="{{ f.hasHint }}"><span style="font-size:12px;color:var(--color-neutral-600);">{{ f.hint }}</span></sc-if>
+                  </label>
+                </sc-for>
+                <sc-for list="{{ g.images }}" as="im">
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <span style="font-size:12px;color:var(--color-neutral-700);">{{ im.label }}</span>
+                    <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
+                      <div style="width:96px;height:120px;background:var(--color-surface);outline:1px solid var(--color-divider);position:relative;overflow:hidden;">
+                        <sc-if value="{{ im.has }}"><img src="{{ im.src }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></sc-if>
+                        <sc-if value="{{ im.none }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#e8e6e5 0 8px,#e2e0df 8px 16px);"></div></sc-if>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:6px;">
+                        <label class="btn btn-secondary" style="cursor:pointer;">Escolher foto<input type="file" accept="image/*" onChange="{{ im.upload }}" style="display:none;"></label>
+                        <sc-if value="{{ im.has }}"><button onClick="{{ im.clear }}" class="btn btn-ghost" style="color:var(--color-accent-700);">Remover</button></sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-for list="{{ g.lists }}" as="l">
+                  <div style="display:flex;flex-direction:column;gap:var(--space-2);grid-column:1 / -1;">
+                    <span style="font-size:12px;color:var(--color-neutral-700);">{{ l.label }}</span>
+                    <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+                      <sc-for list="{{ l.items }}" as="it">
+                        <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--color-divider);padding:5px 6px 5px 12px;font-size:14px;border-radius:999px;">{{ it.v }}<button onClick="{{ it.remove }}" aria-label="Remover" style="border:0;background:none;cursor:pointer;width:22px;height:22px;border-radius:50%;color:var(--color-neutral-700);font-size:15px;line-height:1;" style-hover="background:var(--color-neutral-200)">×</button></span>
+                      </sc-for>
+                    </div>
+                    <form onSubmit="{{ l.add }}" style="display:flex;gap:var(--space-2);max-width:360px;">
+                      <input class="input" value="{{ l.input }}" onChange="{{ l.onInput }}" placeholder="{{ l.ph }}" style="min-height:40px;">
+                      <button type="submit" class="btn btn-secondary" style="flex:none;">Adicionar</button>
+                    </form>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+          </sc-for>
+
+          <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:var(--space-4) var(--space-8);border-top:1px solid var(--color-divider);padding-top:var(--space-6);">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <h2 style="font-family:var(--font-heading);font-weight:600;font-size:22px;margin:0;">Backup</h2>
+              <span style="font-size:13px;color:var(--color-neutral-700);line-height:1.5;">Baixe uma cópia de todas as peças e configurações de vez em quando.</span>
+            </div>
+            <div style="grid-column:span {{ backupSpan }};display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:flex-start;">
+              <button onClick="{{ exportData }}" class="btn btn-secondary">Baixar backup</button>
+              <label class="btn btn-secondary" style="cursor:pointer;">Restaurar backup<input type="file" accept="application/json,.json" onChange="{{ importData }}" style="display:none;"></label>
+            </div>
+          </section>
+        </div>
+      </sc-if>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ hasDraft }}">
+    <div onClick="{{ closeDraft }}" style="animation:isaFade .25s ease both;position:fixed;inset:0;z-index:50;background:color-mix(in srgb, var(--color-neutral-900) 50%, transparent);display:flex;align-items:center;justify-content:center;padding:{{ modalPad }};">
+      <div onClick="{{ stop }}" style="animation:isaRise .35s cubic-bezier(.2,.8,.2,1) both;background:var(--color-bg);width:100%;max-width:880px;height:{{ modalH }};max-height:100%;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);border-radius:{{ modalRadius }};overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-4) clamp(18px,3vw,32px);border-bottom:1px solid var(--color-divider);gap:16px;">
+          <div style="display:flex;flex-direction:column;">
+            <span style="font-family:var(--font-heading);font-size:28px;line-height:1.1;">{{ draftTitle }}</span>
+            <span style="font-size:12px;color:var(--color-neutral-700);font-feature-settings:'tnum';">{{ draftCode }}</span>
+          </div>
+          <button onClick="{{ closeDraft }}" aria-label="Fechar" class="btn btn-secondary btn-icon" style="border-radius:50%;width:40px;height:40px;flex:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
+        <div style="flex:1;overflow:auto;padding:var(--space-6) clamp(18px,3vw,32px);display:flex;flex-direction:column;gap:var(--space-6);">
+          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
+              <span style="font-family:var(--font-heading);font-weight:600;font-size:20px;">Fotos</span>
+              <span style="font-size:12px;color:var(--color-neutral-700);">A primeira é a capa. Toque numa foto para torná-la capa.</span>
+            </div>
+            <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+              <sc-for list="{{ draftImgs }}" as="im">
+                <div style="position:relative;width:96px;height:120px;outline:1px solid {{ im.outline }};background:var(--color-surface);">
+                  <img src="{{ im.src }}" alt="" onClick="{{ im.cover }}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;">
+                  <sc-if value="{{ im.isCover }}"><span style="position:absolute;left:4px;bottom:4px;background:var(--color-bg);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;color:var(--color-accent-700);">Capa</span></sc-if>
+                  <button onClick="{{ im.remove }}" aria-label="Remover foto" style="position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:1px solid var(--color-divider);background:var(--color-bg);cursor:pointer;font-size:15px;line-height:1;color:var(--color-text);">×</button>
+                </div>
+              </sc-for>
+              <label style="width:96px;height:120px;border:1px dashed var(--color-accent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--color-accent-700);font-size:13px;text-align:center;" style-hover="background:color-mix(in srgb, var(--color-accent) 8%, transparent)">
+                <span style="font-size:24px;line-height:1;">+</span>{{ uploadLabel }}
+                <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ addImgs }}" style="display:none;">
+              </label>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:var(--space-4);">
+            <sc-for list="{{ draftFields }}" as="f">
+              <label style="display:flex;flex-direction:column;gap:6px;grid-column:{{ f.col }};">
+                <span style="font-size:12px;color:var(--color-neutral-700);">{{ f.label }}</span>
+                <sc-if value="{{ f.isText }}"><input class="input" type="{{ f.inputType }}" value="{{ f.value }}" placeholder="{{ f.ph }}" onChange="{{ f.on }}" style="min-height:42px;"></sc-if>
+                <sc-if value="{{ f.isArea }}"><textarea class="input" rows="4" value="{{ f.value }}" placeholder="{{ f.ph }}" onChange="{{ f.on }}"></textarea></sc-if>
+                <sc-if value="{{ f.isSelect }}">
+                  <select class="input" value="{{ f.value }}" onChange="{{ f.on }}" style="min-height:42px;">
+                    <sc-for list="{{ f.options }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+                  </select>
+                </sc-if>
+              </label>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:var(--space-4) clamp(18px,3vw,32px);border-top:1px solid var(--color-divider);flex-wrap:wrap;">
+          <span style="font-size:13px;color:var(--color-accent-700);">{{ formErr }}</span>
+          <div style="display:flex;gap:var(--space-2);margin-left:auto;">
+            <button onClick="{{ closeDraft }}" class="btn btn-secondary" style="padding:12px 20px;">Cancelar</button>
+            <button onClick="{{ saveDraft }}" class="btn btn-primary" style="padding:12px 24px;font-size:16px;">Salvar peça</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasFlash }}">
+    <div style="animation:isaToast .3s ease both;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;background:var(--color-neutral-900);color:var(--color-neutral-100);padding:12px 22px;font-size:14px;box-shadow:var(--shadow-md);border-radius:var(--radius-md);max-width:calc(100% - 32px);text-align:center;">{{ flash }}</div>
+  </sc-if>
+</div>
+</script>
+
+<script type="module">
+import { DCLogic, mount } from './js/dc-lite.js';
+
+const LOGIN_MSGS = {
+  rede: 'Não consegui conectar ao Supabase. Confira sua internet e o endereço em js/config.js.',
+  confirmar: 'Esse e-mail ainda não foi confirmado no Supabase (Authentication › Users).',
+  credenciais: 'E-mail ou senha incorretos. Tenta de novo?'
+};
+
+class Component extends DCLogic {
+  state = { data: null, authed: sessionStorage.getItem('isa-admin-ok') === '1' || !!sessionStorage.getItem('isa-admin-token'), token: sessionStorage.getItem('isa-admin-token') || '', email: '', busy: false, pw: '', pwErr: '', tab: 'pecas', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {} };
+  async componentDidMount() {
+    this.m = await import(new URL('js/data.js', document.baseURI).href);
+    if (this.m.remote && !this.state.token) { sessionStorage.removeItem('isa-admin-ok'); this.setState({ authed: false }); }
+    if (!this.m.remote && !sessionStorage.getItem('isa-admin-ok')) this.setState({ authed: false });
+    const data = this.m.remote ? (this.m.cached() || this.m.load()) : this.m.load();
+    this.setState({ data, sd: JSON.parse(JSON.stringify(data.settings)) });
+    if (this.m.remote) this.m.fetchRemote().then(d => d && this.setState({ data: d, sd: JSON.parse(JSON.stringify(d.settings)) })).catch(() => this.toast('Não consegui carregar os dados online. Confira a conexão.'));
+    this.onResize = () => this.setState({ w: window.innerWidth });
+    window.addEventListener('resize', this.onResize);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); }
+  componentDidUpdate() { document.body.style.overflow = this.state.draft ? 'hidden' : ''; }
+  toast(t) { this.setState({ flash: t }); clearTimeout(this.ft); this.ft = setTimeout(() => this.setState({ flash: '' }), 2800); }
+  expired() {
+    sessionStorage.removeItem('isa-admin-token');
+    this.setState({ authed: false, token: '', draft: null });
+    this.toast('Sua sessão expirou. Entre de novo para continuar.');
+  }
+  async commit(data, msg) {
+    if (this.m.remote) {
+      try { await this.m.saveRemote(data, this.state.token); this.setState({ data }); if (msg) this.toast(msg); return true; }
+      catch (e) { if (e.message === 'sessao') this.expired(); else this.toast('Não foi possível salvar online. Tente de novo.'); return false; }
+    }
+    if (this.m.save(data)) { this.setState({ data }); if (msg) this.toast(msg); return true; }
+    this.toast('Sem espaço para salvar. Tente fotos menores ou exclua peças vendidas.');
+    return false;
+  }
+  async readImgs(files) {
+    this.setState({ uploading: true });
+    const out = [];
+    for (const f of Array.from(files || [])) {
+      try {
+        const url = await this.m.compressImage(f);
+        out.push(this.m.remote ? await this.m.uploadImage(url, this.state.token) : url);
+      } catch (e) { if (e.message === 'sessao') { this.expired(); break; } this.toast('Uma foto não pôde ser enviada.'); }
+    }
+    this.setState({ uploading: false });
+    return out;
+  }
+  renderVals() {
+    const st = this.state, d = st.data, m = this.m;
+    const s = d ? d.settings : {};
+    const products = d ? d.products : [];
+    const brl = n => m ? m.brl(n) : '';
+    const mobile = st.w < 720;
+    const statuses = m ? m.statuses : [];
+    const sOf = v => statuses.find(x => x.v === v) || {};
+    const counts = {};
+    products.forEach(p => counts[p.status] = (counts[p.status] || 0) + 1);
+    const filters = [{ v: 'todos', l: 'Todas', c: '' }, ...statuses].map(x => {
+      const on = st.fStatus === x.v;
+      return { label: x.l, n: x.v === 'todos' ? products.length : (counts[x.v] || 0), dot: x.c, dotDisplay: x.c ? 'inline-block' : 'none',
+        border: on ? 'var(--color-accent)' : 'var(--color-divider)', color: on ? 'var(--color-accent-700)' : 'var(--color-text)',
+        bg: on ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'transparent', pick: () => this.setState({ fStatus: x.v }) };
+    });
+    const q = st.q.trim().toLowerCase();
+    const shown = products.filter(p => (st.fStatus === 'todos' || p.status === st.fStatus) && (!q || [p.name, p.brand, p.code].join(' ').toLowerCase().includes(q)));
+    const edit = p => this.setState({ draft: { ...p, images: [...(p.images || [])], price: String(p.price ?? '') }, formErr: '' });
+    const rows = shown.map(p => ({
+      name: p.name, meta: [p.category, 'Tam. ' + p.size, p.code].filter(Boolean).join(' · '), price: brl(p.price),
+      cover: (p.images || [])[0] || '', hasCover: !!(p.images || [])[0], noCover: !(p.images || [])[0],
+      status: p.status, dot: sOf(p.status).c,
+      setStatus: e => this.commit({ ...d, products: products.map(x => x.id === p.id ? { ...x, status: e.target.value } : x) }, 'Status atualizado.'),
+      edit: () => edit(p),
+      remove: () => { if (confirm('Excluir "' + p.name + '"? Isso não pode ser desfeito.')) this.commit({ ...d, products: products.filter(x => x.id !== p.id) }, 'Peça excluída.'); }
+    }));
+    const field = (obj, setter, key, label, type, extra = {}) => ({
+      key, label, value: obj ? (obj[key] ?? '') : '', col: extra.full ? '1 / -1' : 'auto', ph: extra.ph || '', hint: extra.hint || '', hasHint: !!extra.hint,
+      isText: type === 'text' || type === 'number' || type === 'password', isArea: type === 'area', isSelect: type === 'select',
+      inputType: type === 'area' || type === 'select' ? 'text' : type, options: extra.options || [],
+      on: e => setter(key, e.target.value)
+    });
+    const dr = st.draft;
+    const setD = (k, v) => this.setState(x => ({ draft: { ...x.draft, [k]: v } }));
+    const opt = a => a.map(v => ({ v, l: v }));
+    const draftFields = dr ? [
+      field(dr, setD, 'name', 'Nome da peça *', 'text', { full: true, ph: 'Ex.: Vestido midi de linho' }),
+      field(dr, setD, 'brand', 'Marca', 'text', { ph: 'Ex.: Farm' }),
+      field(dr, setD, 'price', 'Preço (R$) *', 'number', { ph: '0,00' }),
+      field(dr, setD, 'category', 'Categoria', 'select', { options: opt(s.categories || []) }),
+      field(dr, setD, 'size', 'Tamanho', 'select', { options: opt(s.sizes || []) }),
+      field(dr, setD, 'condition', 'Estado', 'select', { options: opt(m.conditions) }),
+      field(dr, setD, 'status', 'Status', 'select', { options: statuses.map(x => ({ v: x.v, l: x.l })) }),
+      field(dr, setD, 'measures', 'Medidas', 'text', { full: true, ph: 'Ex.: Busto 88 cm · Cintura 70 cm · Comp. 110 cm' }),
+      field(dr, setD, 'description', 'Descrição', 'area', { full: true, ph: 'Conta um pouquinho da peça: tecido, caimento, quantas vezes usou…' })
+    ] : [];
+    const imgs = dr ? dr.images : [];
+    const draftImgs = imgs.map((src, i) => ({
+      src, isCover: i === 0, outline: i === 0 ? 'var(--color-accent)' : 'var(--color-divider)',
+      cover: () => setD('images', [src, ...imgs.filter((_, j) => j !== i)]),
+      remove: () => setD('images', imgs.filter((_, j) => j !== i))
+    }));
+    const saveDraft = () => {
+      const price = parseFloat(String(dr.price).replace(',', '.'));
+      if (!dr.name.trim()) return this.setState({ formErr: 'Dá um nome pra peça.' });
+      if (!isFinite(price)) return this.setState({ formErr: 'Coloca um preço válido.' });
+      const p = { ...dr, name: dr.name.trim(), price };
+      const exists = products.some(x => x.id === p.id);
+      this.commit({ ...d, products: exists ? products.map(x => x.id === p.id ? p : x) : [p, ...products] }, exists ? 'Peça atualizada.' : 'Peça publicada na loja!').then(ok => ok && this.setState({ draft: null }));
+    };
+    const sd = st.sd || {};
+    const setS = (k, v) => this.setState(x => ({ sd: { ...x.sd, [k]: v } }));
+    const img = (key, label) => ({
+      label, src: sd[key] || '', has: !!sd[key], none: !sd[key], clear: () => setS(key, ''),
+      upload: async e => { const r = await this.readImgs(e.target.files); if (r[0]) setS(key, r[0]); e.target.value = ''; }
+    });
+    const lst = (key, label, ph) => {
+      const items = sd[key] || [];
+      const val = st.inputs[key] || '';
+      return { label, ph, input: val,
+        onInput: e => this.setState(x => ({ inputs: { ...x.inputs, [key]: e.target.value } })),
+        add: e => { e.preventDefault(); const v = val.trim(); if (v && !items.includes(v)) setS(key, [...items, v]); this.setState(x => ({ inputs: { ...x.inputs, [key]: '' } })); },
+        items: items.map(v => ({ v, remove: () => setS(key, items.filter(x => x !== v)) })) };
+    };
+    const groups = [
+      { title: 'Identidade', desc: 'Nome da loja e a faixa de aviso no topo.', fields: [field(sd, setS, 'storeName', 'Nome da loja', 'text'), field(sd, setS, 'announcement', 'Faixa de aviso', 'text', { full: true })], images: [], lists: [] },
+      { title: 'Contato', desc: 'Para onde vão os pedidos.', fields: [field(sd, setS, 'whatsapp', 'WhatsApp', 'text', { hint: 'Com 55 + DDD, só números. Ex.: 5563985157647' }), field(sd, setS, 'instagram', 'Instagram', 'text', { ph: '@seuperfil' })], images: [], lists: [] },
+      { title: 'Capa', desc: 'O primeiro bloco da loja.', fields: [field(sd, setS, 'heroEyebrow', 'Chamada pequena', 'text'), field(sd, setS, 'heroTitle', 'Título', 'text', { full: true }), field(sd, setS, 'heroText', 'Texto', 'area', { full: true })], images: [img('heroImage', 'Foto da capa')], lists: [] },
+      { title: 'Quem é a Isa', desc: 'Sua apresentação.', fields: [field(sd, setS, 'aboutTitle', 'Título', 'text', { full: true }), field(sd, setS, 'aboutText', 'Texto', 'area', { full: true })], images: [img('aboutImage', 'Seu retrato')], lists: [] },
+      { title: 'Pedido no WhatsApp', desc: 'A mensagem que a cliente envia, com a lista de peças logo abaixo.', fields: [field(sd, setS, 'messageIntro', 'Abertura da mensagem', 'area', { full: true }), field(sd, setS, 'checkoutNote', 'Aviso na sacola', 'text', { full: true })], images: [], lists: [] },
+      { title: 'Categorias e tamanhos', desc: 'Aparecem nos filtros da loja e no cadastro de peças.', fields: [], images: [], lists: [lst('categories', 'Categorias', 'Nova categoria'), lst('sizes', 'Tamanhos', 'Novo tamanho')] },
+      { title: 'Segurança', desc: 'Senha para entrar neste painel.', fields: [field(sd, setS, 'password', 'Senha do painel', 'text')], images: [], lists: [] }
+    ].filter(g => !(m && m.remote && g.title === 'Segurança')).map(g => ({ ...g, span: mobile ? 1 : 2 }));
+    return {
+      storeName: s.storeName || 'Desapega da Isa',
+      needLogin: !!d && !st.authed, authed: !!d && st.authed,
+      pw: st.pw, pwErr: st.pwErr, onPw: e => this.setState({ pw: e.target.value, pwErr: '' }),
+      isRemote: !!(m && m.remote), isLocal: !(m && m.remote),
+      email: st.email, onEmail: e => this.setState({ email: e.target.value, pwErr: '' }),
+      loginLabel: st.busy ? 'Entrando…' : 'Entrar',
+      login: async e => {
+        e.preventDefault();
+        if (st.busy) return;
+        if (m.remote) {
+          this.setState({ busy: true });
+          try { const token = await m.signIn(st.email.trim(), st.pw); sessionStorage.setItem('isa-admin-token', token); this.setState({ authed: true, token, pw: '', busy: false }); }
+          catch (x) { this.setState({ pwErr: LOGIN_MSGS[x.message] || ('Não deu para entrar: ' + (x.detail || x.message)), busy: false }); }
+          return;
+        }
+        if (st.pw === s.password) { sessionStorage.setItem('isa-admin-ok', '1'); this.setState({ authed: true, pw: '' }); } else this.setState({ pwErr: 'Senha incorreta. Tenta de novo?' });
+      },
+      logout: () => { sessionStorage.removeItem('isa-admin-ok'); sessionStorage.removeItem('isa-admin-token'); this.setState({ authed: false, token: '' }); },
+      tabs: [['pecas', 'Peças'], ['loja', 'Configurações']].map(([v, l]) => ({ label: l, line: st.tab === v ? 'var(--color-accent)' : 'transparent', color: st.tab === v ? 'var(--color-text)' : 'var(--color-neutral-600)', pick: () => this.setState({ tab: v, sd: v === 'loja' ? JSON.parse(JSON.stringify(s)) : st.sd }) })),
+      tabPecas: st.tab === 'pecas', tabLoja: st.tab === 'loja',
+      filters, q: st.q, onQ: e => this.setState({ q: e.target.value }),
+      rows, noRows: !!d && rows.length === 0, statusOpts: statuses.map(x => ({ v: x.v, l: x.l })),
+      rowCols: mobile ? '56px minmax(0,1fr)' : '56px minmax(0,1fr) auto', ctrlCol: mobile ? '1 / -1' : 'auto',
+      newProduct: () => this.setState({ formErr: '', draft: { id: m.uid(), code: m.nextCode(products), name: '', brand: '', category: (s.categories || [])[0] || '', size: (s.sizes || [])[0] || '', condition: 'Seminova', price: '', measures: '', description: '', status: 'disponivel', images: [], createdAt: Date.now() } }),
+      hasDraft: !!dr, draftTitle: dr && products.some(x => x.id === dr.id) ? 'Editar peça' : 'Nova peça', draftCode: dr ? 'Código ' + dr.code : '',
+      draftFields, draftImgs, uploadLabel: st.uploading ? 'Enviando…' : 'Adicionar fotos',
+      addImgs: async e => { const r = await this.readImgs(e.target.files); e.target.value = ''; this.setState(x => ({ draft: { ...x.draft, images: [...x.draft.images, ...r] } })); },
+      saveDraft, closeDraft: () => this.setState({ draft: null }), stop: e => e.stopPropagation(), formErr: st.formErr,
+      modalPad: mobile ? '0' : '32px', modalH: mobile ? '100%' : 'auto', modalRadius: mobile ? '0' : 'var(--radius-lg)',
+      groups, backupSpan: mobile ? 1 : 2,
+      saveSettings: () => { if (!m.remote && !sd.password) return this.toast('A senha não pode ficar vazia.'); this.commit({ ...d, settings: sd }, 'Salvo! Já está na loja.'); },
+      exportData: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(d)], { type: 'application/json' })); a.download = 'desapega-da-isa-backup.json'; a.click(); },
+      importData: e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { const nd = JSON.parse(r.result); if (!nd.products || !nd.settings) throw 0; this.commit(nd, 'Backup restaurado.'); this.setState({ sd: nd.settings }); } catch (x) { this.toast('Arquivo de backup inválido.'); } }; r.readAsText(f); e.target.value = ''; },
+      flash: st.flash, hasFlash: !!st.flash
+    };
+  }
+}
+
+mount(Component);
+</script>
+</body>
+</html>
