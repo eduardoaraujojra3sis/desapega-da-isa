@@ -117,3 +117,7 @@ Observações:
 - As visitas da própria Isa não entram na conta: depois que ela entra no painel, aquele navegador deixa de ser contado.
 - Uma venda é registrada quando a peça é marcada como **Vendida** (pela lista ou pelo cadastro). Se ela vendeu com desconto, dá para informar o valor recebido no cadastro da peça.
 - Peças que já estavam como vendidas antes desta atualização entram no total geral, mas sem data de venda.
+
+## Links das fotos no WhatsApp
+
+Na mensagem do pedido, o link da foto usa o endereço do próprio site (`/foto/nome.jpg`). Os arquivos `vercel.json` (Vercel) e `_redirects` (Netlify) fazem esse endereço buscar a foto no armazenamento. Se trocar de projeto no Supabase, atualize o endereço nesses dois arquivos também.

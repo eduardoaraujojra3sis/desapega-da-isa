@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/foto/:name", "destination": "https://knczgfdowncyionlkyrq.supabase.co/storage/v1/object/public/fotos/:name" }
+  ]
+}

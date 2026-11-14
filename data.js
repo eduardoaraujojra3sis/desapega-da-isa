@@ -178,3 +178,11 @@ export function finalPrice(p) {
   const price = Number(p && p.price) || 0, d = discountOf(p);
   return d ? Math.round(price * (100 - d)) / 100 : price;
 }
+
+// Link da foto com o endereço do próprio site (ex.: https://desapega-da-isa.vercel.app/foto/abc.jpg).
+// O vercel.json / _redirects repassa /foto/... para o armazenamento de fotos.
+export function sitePhoto(url) {
+  const base = SUPABASE_URL + '/storage/v1/object/public/fotos/';
+  if (!url || !url.startsWith(base)) return /^https?:/.test(url || '') ? url : '';
+  return location.origin + '/foto/' + url.slice(base.length);
+}

@@ -467,7 +467,7 @@ class Component extends DCLogic {
     const total = items.reduce((a, p) => a + fp(p), 0);
     const ig = (s.instagram || '').replace('@', '').trim();
     const checkout = () => {
-      const photo = p => { const u = cover(p); return u && /^https?:/.test(u) ? `\n   Foto: ${u}` : ''; };
+      const photo = p => { const u = m.sitePhoto(cover(p)); return u ? `\n   Foto: ${u}` : ''; };
       const lines = items.map((p, i) => `${i + 1}. *${p.name}*${p.brand ? ' (' + p.brand + ')' : ''} · Tam. ${p.size} · ${brl(fp(p))}${dc(p) ? ' (de ' + brl(p.price) + ', ' + offLabel(p) + ')' : ''} · cód. ${p.code}${photo(p)}`);
       const txt = `${s.messageIntro}\n\n${lines.join('\n')}\n\nTotal: ${brl(total)}${st.name.trim() ? '\n\nMeu nome: ' + st.name.trim() : ''}`;
       m.track([{ tipo: 'pedido' }, ...items.map(p => ({ tipo: 'pedido_item', produto: p.id }))]);
