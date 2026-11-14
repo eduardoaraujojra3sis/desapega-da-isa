@@ -319,3 +319,21 @@ export function uploadVideo(file, onProgress) {
     return SUPABASE_URL + '/storage/v1/object/public/fotos/' + name;
   })();
 }
+
+// ---------- Miniaturas (vitrine mais leve e rápida) ----------
+export const THUMB_PX = 640;
+export function thumbOf(p, url) { return (p && p.thumbs && p.thumbs[url]) || url; }
+// Gera e envia uma miniatura (≈640 px) a partir de uma imagem (data URL ou link público).
+export async function makeThumb(src) {
+  const blob = src.startsWith('data:') ? await (await fetch(src)).blob() : await (await fetch(src, { mode: 'cors' })).blob();
+  const small = await decodeToDataURL(blob, THUMB_PX, 0.78);
+  return small;
+}
+export async function uploadThumbFor(fullUrl, srcForThumb) {
+  const small = await makeThumb(srcForThumb || fullUrl);
+  const name = fullUrl.split('/').pop().replace(/\.jpe?g$/i, '') + '_t.jpg';
+  const blob = await (await fetch(small)).blob();
+  const r = await authed(t => fetch(SUPABASE_URL + '/storage/v1/object/fotos/' + name, { method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + t, 'Content-Type': 'image/jpeg' }, body: blob }));
+  if (!r.ok && !/already exists|Duplicate|409/i.test(await r.text())) throw new Error('upload');
+  return SUPABASE_URL + '/storage/v1/object/public/fotos/' + name;
+}

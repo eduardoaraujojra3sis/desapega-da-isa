@@ -28,6 +28,8 @@ a:hover{color:#8B4A2B}
 button,select,input{font-family:inherit}
 :focus-visible{outline:2px solid #8B4A2B;outline-offset:2px}
 ::selection{background:#E6C9A8}
+.fade-img{opacity:0;transition:opacity .35s ease}
+.fade-img.on{opacity:1}
 </style>
 </head>
 <body>
@@ -149,10 +151,10 @@ button,select,input{font-family:inherit}
 
       <div style="display:grid;grid-template-columns:{{ gridCols }};gap:clamp(24px,3vw,40px) clamp(6px,1vw,16px);">
         <sc-for list="{{ cards }}" as="c">
-          <article onClick="{{ c.open }}" style="cursor:pointer;display:flex;flex-direction:column;gap:14px;opacity:{{ c.opacity }};transition:transform .3s ease;" style-hover="transform:translateY(-3px)">
+          <article key="{{ c.key }}" onClick="{{ c.open }}" style="cursor:pointer;display:flex;flex-direction:column;gap:14px;opacity:{{ c.opacity }};transition:transform .3s ease;" style-hover="transform:translateY(-3px)">
             <div style="position:relative;aspect-ratio:2/3;overflow:hidden;background:#EADCC8;border-radius:4px;">
               <sc-if value="{{ c.hasCover }}">
-                <img loading="lazy" decoding="async" src="{{ c.cover }}" alt="{{ c.name }}" style="width:100%;height:100%;object-fit:cover;display:block;{{ c.imgStyle }}">
+                <img key="{{ c.thumb }}" loading="lazy" decoding="async" src="{{ c.thumb }}" alt="{{ c.name }}" onLoad="{{ imgIn }}" class="fade-img" style="width:100%;height:100%;object-fit:cover;display:block;{{ c.imgStyle }}">
               </sc-if>
               <sc-if value="{{ c.coverVid }}">
                 <video src="{{ c.coverVid }}" muted="{{ true }}" playsinline="{{ true }}" preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></video>
@@ -264,7 +266,7 @@ button,select,input{font-family:inherit}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));">
           <div style="padding:clamp(12px,2vw,24px);display:flex;flex-direction:column;gap:10px;">
             <div style="position:relative;aspect-ratio:4/5;background:#EADCC8;border-radius:8px;overflow:hidden;">
-              <sc-if value="{{ hasMain }}"><img src="{{ mainImg }}" alt="{{ p.name }}" style="width:100%;height:100%;object-fit:cover;display:block;{{ mainStyle }}"></sc-if>
+              <sc-if value="{{ hasMain }}"><img key="{{ mainImg }}" src="{{ mainImg }}" alt="{{ p.name }}" style="width:100%;height:100%;object-fit:cover;display:block;{{ mainStyle }}"></sc-if>
               <sc-if value="{{ hasVid }}">
                 <video data-main-video="1" src="{{ mainVid }}" muted="{{ vidMuted }}" autoplay="{{ true }}" loop="{{ true }}" playsinline="{{ true }}" controls="{{ true }}" preload="auto" style="width:100%;height:100%;object-fit:contain;display:block;background:#2B1D14;"></video>
                 <button onClick="{{ toggleSound }}" aria-label="{{ soundLabel }}" style="position:absolute;right:12px;bottom:64px;z-index:2;display:inline-flex;align-items:center;gap:8px;background:rgba(43,29,20,.85);color:#FBF6EE;border:0;border-radius:999px;padding:9px 14px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;">
@@ -293,7 +295,7 @@ button,select,input{font-family:inherit}
               <div style="display:flex;gap:8px;overflow-x:auto;">
                 <sc-for list="{{ thumbs }}" as="t">
                   <button onClick="{{ t.pick }}" style="flex:none;width:64px;height:80px;padding:0;position:relative;border:2px solid {{ t.border }};border-radius:6px;overflow:hidden;background:#EADCC8;cursor:pointer;opacity:{{ t.opacity }};">
-                    <sc-if value="{{ t.isImg }}"><img src="{{ t.src }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;{{ t.style }}"></sc-if>
+                    <sc-if value="{{ t.isImg }}"><img key="{{ t.thumb }}" src="{{ t.thumb }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;{{ t.style }}"></sc-if>
                     <sc-if value="{{ t.isVid }}"><span style="position:relative;display:block;width:100%;height:100%;"><video src="{{ t.vsrc }}" muted="{{ true }}" playsinline="{{ true }}" preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></video><span style="position:absolute;inset:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;background:rgba(43,29,20,.45);color:#FBF6EE;font-size:9px;font-weight:700;letter-spacing:.12em;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>VÍDEO</span></span></sc-if>
                   </button>
                 </sc-for>
@@ -356,7 +358,7 @@ button,select,input{font-family:inherit}
           <sc-for list="{{ cartItems }}" as="it">
             <div style="display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:14px;padding:20px 0;border-bottom:1px dashed #CDB79A;align-items:start;">
               <div style="width:76px;height:96px;background:#EADCC8;border-radius:6px;position:relative;overflow:hidden;">
-                <sc-if value="{{ it.hasCover }}"><img src="{{ it.cover }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;{{ it.style }}"></sc-if>
+                <sc-if value="{{ it.hasCover }}"><img key="{{ it.thumb }}" src="{{ it.thumb }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;{{ it.style }}"></sc-if>
                 <sc-if value="{{ it.noCover }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 8px,#E3D1B9 8px 16px);"></div></sc-if>
               </div>
               <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
@@ -479,6 +481,7 @@ class Component extends DCLogic {
     const statusInfo = p => p.status === 'vendido' ? ['Vendida', '#2B1D14'] : p.status === 'reservado' ? ['Reservada', '#8B4A2B'] : null;
     const cover = p => (p.images && p.images[0]) || '';
     const fp = p => m ? m.finalPrice(p) : Number(p.price || 0);
+    const th = (p, u) => m ? m.thumbOf(p, u) : u;
     const adj = (p, src) => m ? m.imgStyle(p && p.imgAdj && p.imgAdj[src]) : '';
     const dc = p => m ? m.discountOf(p) : 0;
     const offLabel = p => '-' + String(dc(p)).replace('.', ',') + '%';
@@ -493,7 +496,7 @@ class Component extends DCLogic {
       const si = statusInfo(p);
       return {
         name: p.name, brand: p.brand, meta: ['Tam. ' + p.size, p.condition].filter(Boolean).join(' · '),
-        price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, off: offLabel(p), priceColor: dc(p) ? '#8B4A2B' : '#2B1D14', imgStyle: adj(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p) && !(p.videos || []).length, coverVid: !cover(p) && (p.videos || [])[0] ? p.videos[0] + '#t=0.1' : '', hasVideo: (p.videos || []).length > 0,
+        price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, off: offLabel(p), priceColor: dc(p) ? '#8B4A2B' : '#2B1D14', key: p.id, thumb: th(p, cover(p)), imgStyle: adj(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p) && !(p.videos || []).length, coverVid: !cover(p) && (p.videos || [])[0] ? p.videos[0] + '#t=0.1' : '', hasVideo: (p.videos || []).length > 0,
         hasBadge: !!si, badge: si ? si[0] : '', badgeColor: si ? si[1] : '', opacity: p.status === 'vendido' ? 0.55 : 1,
         openVideo: e => { e.stopPropagation(); this.setState({ openId: p.id, img: 0, vidMuted: true }); m && m.track([{ tipo: 'clique', produto: p.id }]); },
         open: () => { this.setState({ openId: p.id, img: 0, vidMuted: true }); m && m.track([{ tipo: 'clique', produto: p.id }]); }
@@ -537,6 +540,7 @@ class Component extends DCLogic {
       isHome: st.cat === 'Todas', isCat: st.cat !== 'Todas', catTitle: st.cat,
       catSub: list.length === 1 ? '1 peça no closet' : list.length + ' peças no closet',
       goHome: e => { e && e.preventDefault(); this.goHome(); },
+      imgIn: e => e.currentTarget.classList.add('on'),
       cards, isEmpty: !!d && list.length === 0,
       hasFilter: pub.length > 0,
       emptyTitle: pub.length ? 'Ops, nada por aqui nesse filtro.' : 'Peças novas chegando em breve.',
@@ -551,14 +555,14 @@ class Component extends DCLogic {
       showVidBtn: firstVid >= 0 && !!cur && cur.t !== 'vid', vidBtnLabel: nVids > 1 ? 'Ver vídeos (' + nVids + ')' : 'Ver vídeo',
       goVid: e => { e.stopPropagation(); this.setState({ img: firstVid }); }, noMain: !cur,
       hasThumbs: imgs.length > 1, imgCounter: (idx + 1) + ' / ' + imgs.length,
-      thumbs: media.map((x, i) => ({ src: x.src, vsrc: x.src + '#t=0.1', isImg: x.t === 'img', isVid: x.t === 'vid', style: x.t === 'img' ? adj(op, x.src) : '', border: i === idx ? '#8B4A2B' : 'transparent', opacity: i === idx ? 1 : 0.7, pick: () => this.setState({ img: i }) })),
+      thumbs: media.map((x, i) => ({ src: x.src, thumb: x.t === 'img' ? th(op, x.src) : '', vsrc: x.src + '#t=0.1', isImg: x.t === 'img', isVid: x.t === 'vid', style: x.t === 'img' ? adj(op, x.src) : '', border: i === idx ? '#8B4A2B' : 'transparent', opacity: i === idx ? 1 : 0.7, pick: () => this.setState({ img: i }) })),
       prevImg: e => { e.stopPropagation(); this.setState({ img: (idx - 1 + imgs.length) % imgs.length }); },
       nextImg: e => { e.stopPropagation(); this.setState({ img: (idx + 1) % imgs.length }); },
       details: op ? [['Marca', op.brand], ['Tamanho', op.size], ['Estado', op.condition], ['Medidas', op.measures], ['Código', op.code]].filter(r => r[1]).map(r => ({ k: r[0], v: r[1] })) : [],
       btnLabel, btnAction, btnDisabled, btnBg: btnDisabled ? '#A8927A' : '#8B4A2B', btnCursor: btnDisabled ? 'not-allowed' : 'pointer', chipJustify: mobile ? 'flex-start' : 'center',
       cartOpen: st.cartOpen, cartEmpty: items.length === 0, cartHas: items.length > 0,
       cartCountLabel: items.length === 1 ? '1 peça' : items.length + ' peças',
-      cartItems: items.map(p => ({ name: p.name, brand: p.brand, meta: 'Tam. ' + p.size + ' · ' + p.code, price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, style: adj(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p), remove: () => this.setCart(st.cart.filter(x => x !== p.id)) })),
+      cartItems: items.map(p => ({ name: p.name, brand: p.brand, meta: 'Tam. ' + p.size + ' · ' + p.code, price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, style: adj(p, cover(p)), thumb: th(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p), remove: () => this.setCart(st.cart.filter(x => x !== p.id)) })),
       totalStr: brl(total), name: st.name, onName: e => this.setState({ name: e.target.value }), checkout,
       toast: st.toast, hasToast: !!st.toast,
       igName: ig, igUrl: 'https://www.instagram.com/' + ig + '/', waUrl: m ? m.waLink(s.whatsapp, 'Oi, Isa! Vim pelo Desapega.') : '#'

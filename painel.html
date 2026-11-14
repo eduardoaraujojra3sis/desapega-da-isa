@@ -104,6 +104,9 @@
               </div>
             </div>
 
+            <sc-if value="{{ optLabel }}">
+              <div class="notice" style="background:#EEF4EA;border-color:#B9D2A8;color:#2F5A2A;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg><span>{{ optLabel }}</span></div>
+            </sc-if>
             <sc-if value="{{ statsNotice }}">
               <div class="notice">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
@@ -536,6 +539,7 @@ class Component extends DCLogic {
     this.setState({ data, sd: JSON.parse(JSON.stringify(data.settings)) });
     if (this.m.remote) this.m.fetchRemote().then(d => d && this.setState({ data: d, sd: JSON.parse(JSON.stringify(d.settings)) })).catch(() => this.toast('Não consegui carregar os dados online. Confira a conexão.'));
     if (authed) { this.m.markAdmin(); this.loadStats(this.state.period); }
+    this.optTimer = setInterval(() => { if (this.state.authed && this.state.data && !this.state.draft) { clearInterval(this.optTimer); this.optimizeThumbs(); } }, 3000);
     this.onResize = () => this.setState({ w: window.innerWidth });
     window.addEventListener('resize', this.onResize);
     this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft && !this.state.uploading && this.state.vidPct < 0) this.setState({ draft: null }); };
@@ -604,6 +608,37 @@ class Component extends DCLogic {
       if (url) this.setState(x => x.draft ? { draft: { ...x.draft, videos: [...(x.draft.videos || []), url] } } : null);
     }
   }
+  // Cria miniaturas leves para as fotos antigas (uma vez só), deixando a vitrine rápida.
+  async optimizeThumbs() {
+    const m = this.m;
+    if (this.optRunning || !m.remote || !m.getSession() || !this.state.data) return;
+    const todo = [];
+    this.state.data.products.forEach(p => (p.images || []).forEach(u => { if (!(p.thumbs && p.thumbs[u]) && /^https?:/.test(u)) todo.push(u); }));
+    if (!todo.length) return;
+    this.optRunning = true;
+    const found = {};
+    let done = 0;
+    this.setState({ opt: { done, total: todo.length } });
+    let next = 0;
+    const worker = async () => {
+      while (next < todo.length) {
+        const u = todo[next++];
+        try { found[u] = await m.uploadThumbFor(u); } catch (e) { console.warn('miniatura falhou', u, e); if (e.message === 'sessao') break; }
+        this.setState({ opt: { done: ++done, total: todo.length } });
+      }
+    };
+    await Promise.all([worker(), worker()]);
+    // salva só as miniaturas, em cima dos dados mais recentes
+    if (Object.keys(found).length) {
+      const wait = () => new Promise(r => setTimeout(r, 400));
+      while (this.state.saving) await wait();
+      const d = this.state.data;
+      const products = d.products.map(p => { const t = { ...(p.thumbs || {}) }; let ch = false; (p.images || []).forEach(u => { if (found[u] && !t[u]) { t[u] = found[u]; ch = true; } }); return ch ? { ...p, thumbs: t } : p; });
+      await this.commit({ ...d, products }, '');
+    }
+    this.optRunning = false;
+    this.setState({ opt: null });
+  }
   async readVideo(file) {
     const m = this.m;
     if (!file) return null;
@@ -634,6 +669,7 @@ class Component extends DCLogic {
         try {
           const url = await this.m.compressImage(list[k]);
           out[k] = this.m.remote ? await this.m.uploadImage(url) : url;
+          if (this.m.remote) { try { (this.thumbMap = this.thumbMap || {})[out[k]] = await this.m.uploadThumbFor(out[k], url); } catch (x) { console.warn('miniatura', x); } }
         } catch (e) {
           if (e.message === 'sessao' && !this.m.getSession()) lost = true;
           fails.push(e.message);
@@ -818,6 +854,7 @@ class Component extends DCLogic {
       const sp = parseFloat(String(dr.soldPrice ?? '').replace(',', '.'));
       let p = { ...dr, name: dr.name.trim(), price, discount: disc || null, soldPrice: isFinite(sp) ? sp : null };
       if (p.imgAdj) { const keep = {}; (p.images || []).forEach(u => { if (p.imgAdj[u]) keep[u] = p.imgAdj[u]; }); p.imgAdj = keep; }
+      { const prev = (products.find(x => x.id === p.id) || {}).thumbs || {}; const all = { ...prev, ...(p.thumbs || {}), ...(this.thumbMap || {}) }; const t = {}; (p.images || []).forEach(u => { if (all[u]) t[u] = all[u]; }); p.thumbs = t; }
       p = withSale(p, p.status);
       const exists = products.some(x => x.id === p.id);
       this.commit({ ...d, products: exists ? products.map(x => x.id === p.id ? p : x) : [p, ...products] }, exists ? 'Peça atualizada.' : 'Peça publicada na loja!').then(ok => ok && this.setState({ draft: null }));
@@ -877,6 +914,7 @@ class Component extends DCLogic {
 
     return {
       ...adjVals,
+      optLabel: st.opt ? 'Otimizando as fotos para a loja carregar mais rápido… ' + st.opt.done + ' de ' + st.opt.total + ' (pode continuar usando o painel)' : '',
       loading: !d, storeName: s.storeName || 'Desapega da Isa',
       needLogin: !!d && !st.authed, authed: !!d && st.authed,
       pw: st.pw, pwErr: st.pwErr, onPw: e => this.setState({ pw: e.target.value, pwErr: '' }),
