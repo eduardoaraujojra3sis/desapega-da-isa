@@ -124,7 +124,7 @@ button,select,input{font-family:inherit}
         </div>
       </sc-if>
 
-      <div style="display:flex;flex-direction:column;gap:16px;border-top:1px dashed #CDB79A;border-bottom:1px dashed #CDB79A;padding:18px 0;">
+      <div id="filtros" style="display:flex;flex-direction:column;gap:16px;border-top:1px dashed #CDB79A;border-bottom:1px dashed #CDB79A;padding:18px 0;">
         <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;justify-content:{{ chipJustify }};">
           <sc-for list="{{ cats }}" as="c">
             <button onClick="{{ c.pick }}" style="flex:none;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:10px 20px;border-radius:999px;white-space:nowrap;border:1px solid {{ c.border }};color:{{ c.color }};background:{{ c.bg }};cursor:pointer;">{{ c.label }}</button>
@@ -431,13 +431,25 @@ class Component extends DCLogic {
     this.onHash = () => {
       const h = decodeURIComponent(location.hash.slice(1));
       const cat = h.startsWith('categoria/') ? h.slice(10) : 'Todas';
-      if (cat !== this.state.cat) { this.setState({ cat, size: 'Todos' }); if (cat !== 'Todas') window.scrollTo({ top: 0, behavior: 'instant' }); }
+      if (cat !== this.state.cat) { if (cat !== 'Todas') this.wantGrid = true; this.setState({ cat, size: 'Todos' }); }
     };
     this.onHash();
     window.addEventListener('hashchange', this.onHash);
   }
   goCat(c) { location.hash = 'categoria/' + encodeURIComponent(c); }
-  goHome() { if (location.hash.startsWith('#categoria/')) { history.pushState(null, '', location.pathname + location.search); this.setState({ cat: 'Todas', size: 'Todos' }); window.scrollTo({ top: 0, behavior: 'instant' }); } }
+  goHome(toGrid) {
+    if (location.hash.startsWith('#categoria/')) history.pushState(null, '', location.pathname + location.search);
+    if (toGrid) this.wantGrid = true; else window.scrollTo({ top: 0, behavior: 'instant' });
+    this.setState({ cat: 'Todas', size: 'Todos' });
+  }
+  // Leva a tela direto para as peças (filtros no topo, logo abaixo do cabeçalho fixo)
+  scrollToGrid() {
+    const el = document.getElementById('filtros');
+    if (!el) return;
+    const head = document.querySelector('header');
+    const y = el.getBoundingClientRect().top + window.scrollY - (head ? head.offsetHeight : 80) - 6;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
+  }
   componentWillUnmount() {
     window.removeEventListener('storage', this.reload);
     window.removeEventListener('focus', this.reload);
@@ -446,6 +458,7 @@ class Component extends DCLogic {
     window.removeEventListener('hashchange', this.onHash);
   }
   componentDidUpdate() {
+    if (this.wantGrid && this.state.data) { this.wantGrid = false; requestAnimationFrame(() => this.scrollToGrid()); }
     document.body.style.overflow = (this.state.openId || this.state.cartOpen) ? 'hidden' : '';
     const v = document.querySelector('video[data-main-video]');
     if (v && v.paused && v.dataset.tried !== v.getAttribute('src')) {
@@ -471,7 +484,7 @@ class Component extends DCLogic {
     const offLabel = p => '-' + String(dc(p)).replace('.', ',') + '%';
     const cats = ['Todas', ...(s.categories || [])].map(c => {
       const on = c === st.cat;
-      return { label: c, bg: on ? '#2B1D14' : 'transparent', color: on ? '#F5EDE1' : '#2B1D14', border: on ? '#2B1D14' : '#CDB79A', pick: () => { if (c === 'Todas') this.goHome(); else this.goCat(c); } };
+      return { label: c, bg: on ? '#2B1D14' : 'transparent', color: on ? '#F5EDE1' : '#2B1D14', border: on ? '#2B1D14' : '#CDB79A', pick: () => { if (c === 'Todas') this.goHome(true); else this.goCat(c); } };
     });
     const rank = p => p.status === 'vendido' ? 2 : p.status === 'reservado' ? 1 : 0;
     const list = pub.filter(p => (st.cat === 'Todas' || p.category === st.cat) && (st.size === 'Todos' || p.size === st.size))
