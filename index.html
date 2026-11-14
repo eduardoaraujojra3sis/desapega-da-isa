@@ -157,13 +157,16 @@ button,select,input{font-family:inherit}
               <sc-if value="{{ c.hasBadge }}">
                 <span style="position:absolute;top:16px;left:16px;background:{{ c.badgeColor }};color:#FBF6EE;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;">{{ c.badge }}</span>
               </sc-if>
+              <sc-if value="{{ c.hasOff }}">
+                <span style="position:absolute;top:16px;right:16px;background:#8B4A2B;color:#FBF6EE;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 11px;border-radius:999px;font-feature-settings:'tnum';">{{ c.off }}</span>
+              </sc-if>
             </div>
             <div style="display:flex;flex-direction:column;gap:5px;padding:0 2px;">
               <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#8B4A2B;">{{ c.brand }}</span>
               <span style="font-family:'Playfair Display',serif;font-size:clamp(17px,1.5vw,20px);line-height:1.25;">{{ c.name }}</span>
               <div style="display:flex;justify-content:space-between;align-items:baseline;gap:4px 10px;flex-wrap:wrap;margin-top:2px;">
                 <span style="font-size:13px;color:#6B5646;">{{ c.meta }}</span>
-                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:500;font-feature-settings:'tnum';">{{ c.price }}</span>
+                <span style="display:inline-flex;align-items:baseline;gap:8px;white-space:nowrap;"><sc-if value="{{ c.hasOff }}"><s style="font-size:13px;color:#8A7462;font-feature-settings:'tnum';">{{ c.oldPrice }}</s></sc-if><span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:500;font-feature-settings:'tnum';color:{{ c.priceColor }};">{{ c.price }}</span></span>
               </div>
             </div>
           </article>
@@ -277,7 +280,13 @@ button,select,input{font-family:inherit}
           <div style="padding:clamp(24px,4vw,56px) clamp(20px,4vw,48px);display:flex;flex-direction:column;gap:18px;">
             <span style="font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#8B4A2B;">{{ p.brand }}</span>
             <h2 style="font-family:'Playfair Display',serif;font-weight:400;font-size:clamp(32px,3.4vw,46px);line-height:1.08;margin:0;">{{ p.name }}</h2>
-            <span style="font-family:'Playfair Display',serif;font-size:28px;font-feature-settings:'tnum';">{{ p.priceStr }}</span>
+            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+              <span style="font-family:'Playfair Display',serif;font-size:28px;font-feature-settings:'tnum';color:{{ p.priceColor }};">{{ p.priceStr }}</span>
+              <sc-if value="{{ p.hasOff }}">
+                <s style="font-size:16px;color:#8A7462;font-feature-settings:'tnum';">{{ p.oldPrice }}</s>
+                <span style="background:#8B4A2B;color:#FBF6EE;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;">{{ p.off }}</span>
+              </sc-if>
+            </div>
             <sc-if value="{{ p.hasStatus }}">
               <span style="align-self:flex-start;background:{{ p.statusColor }};color:#FBF6EE;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;">{{ p.statusLabel }}</span>
             </sc-if>
@@ -333,7 +342,7 @@ button,select,input{font-family:inherit}
                 <span style="font-size:13px;color:#6B5646;">{{ it.meta }}</span>
                 <button onClick="{{ it.remove }}" style="align-self:flex-start;background:none;border:0;padding:6px 0 0;font-size:12px;font-weight:700;letter-spacing:.08em;color:#8B4A2B;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Tirar da sacola</button>
               </div>
-              <span style="font-family:'Playfair Display',serif;font-size:17px;font-feature-settings:'tnum';white-space:nowrap;">{{ it.price }}</span>
+              <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;white-space:nowrap;"><span style="font-family:'Playfair Display',serif;font-size:17px;font-feature-settings:'tnum';">{{ it.price }}</span><sc-if value="{{ it.hasOff }}"><s style="font-size:12px;color:#8A7462;font-feature-settings:'tnum';">{{ it.oldPrice }}</s></sc-if></span>
             </div>
           </sc-for>
         </div>
@@ -425,18 +434,21 @@ class Component extends DCLogic {
     const pub = products.filter(p => p.status !== 'oculto');
     const statusInfo = p => p.status === 'vendido' ? ['Vendida', '#2B1D14'] : p.status === 'reservado' ? ['Reservada', '#8B4A2B'] : null;
     const cover = p => (p.images && p.images[0]) || '';
+    const fp = p => m ? m.finalPrice(p) : Number(p.price || 0);
+    const dc = p => m ? m.discountOf(p) : 0;
+    const offLabel = p => '-' + String(dc(p)).replace('.', ',') + '%';
     const cats = ['Todas', ...(s.categories || [])].map(c => {
       const on = c === st.cat;
       return { label: c, bg: on ? '#2B1D14' : 'transparent', color: on ? '#F5EDE1' : '#2B1D14', border: on ? '#2B1D14' : '#CDB79A', pick: () => { if (c === 'Todas') this.goHome(); else this.goCat(c); } };
     });
     const rank = p => p.status === 'vendido' ? 2 : p.status === 'reservado' ? 1 : 0;
     const list = pub.filter(p => (st.cat === 'Todas' || p.category === st.cat) && (st.size === 'Todos' || p.size === st.size))
-      .sort((a, b) => rank(a) - rank(b) || (st.sort === 'menor' ? a.price - b.price : st.sort === 'maior' ? b.price - a.price : (b.createdAt || 0) - (a.createdAt || 0)));
+      .sort((a, b) => rank(a) - rank(b) || (st.sort === 'menor' ? fp(a) - fp(b) : st.sort === 'maior' ? fp(b) - fp(a) : (b.createdAt || 0) - (a.createdAt || 0)));
     const cards = list.map(p => {
       const si = statusInfo(p);
       return {
         name: p.name, brand: p.brand, meta: ['Tam. ' + p.size, p.condition].filter(Boolean).join(' · '),
-        price: brl(p.price), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p),
+        price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, off: offLabel(p), priceColor: dc(p) ? '#8B4A2B' : '#2B1D14', cover: cover(p), hasCover: !!cover(p), noCover: !cover(p),
         hasBadge: !!si, badge: si ? si[0] : '', badgeColor: si ? si[1] : '', opacity: p.status === 'vendido' ? 0.55 : 1,
         open: () => { this.setState({ openId: p.id, img: 0 }); m && m.track([{ tipo: 'clique', produto: p.id }]); }
       };
@@ -452,10 +464,11 @@ class Component extends DCLogic {
     else if (inCart) { btnLabel = 'Já tá na sacola — ver sacola'; btnAction = () => this.setState({ openId: null, cartOpen: true }); }
     const osi = op ? statusInfo(op) : null;
     const items = st.cart.map(id => products.find(p => p.id === id)).filter(Boolean);
-    const total = items.reduce((a, p) => a + Number(p.price || 0), 0);
+    const total = items.reduce((a, p) => a + fp(p), 0);
     const ig = (s.instagram || '').replace('@', '').trim();
     const checkout = () => {
-      const lines = items.map((p, i) => `${i + 1}. ${p.name}${p.brand ? ' (' + p.brand + ')' : ''} · Tam. ${p.size} · ${brl(p.price)} · cód. ${p.code}`);
+      const photo = p => { const u = cover(p); return u && /^https?:/.test(u) ? `\n   Foto: ${u}` : ''; };
+      const lines = items.map((p, i) => `${i + 1}. *${p.name}*${p.brand ? ' (' + p.brand + ')' : ''} · Tam. ${p.size} · ${brl(fp(p))}${dc(p) ? ' (de ' + brl(p.price) + ', ' + offLabel(p) + ')' : ''} · cód. ${p.code}${photo(p)}`);
       const txt = `${s.messageIntro}\n\n${lines.join('\n')}\n\nTotal: ${brl(total)}${st.name.trim() ? '\n\nMeu nome: ' + st.name.trim() : ''}`;
       m.track([{ tipo: 'pedido' }, ...items.map(p => ({ tipo: 'pedido_item', produto: p.id }))]);
       window.open(m.waLink(s.whatsapp, txt), '_blank');
@@ -481,7 +494,7 @@ class Component extends DCLogic {
       gridCols: st.w < 900 ? 'repeat(2,minmax(0,1fr))' : st.w < 1280 ? 'repeat(3,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))',
       hasOpen: !!op, closeProduct: () => this.setState({ openId: null }), stop: e => e.stopPropagation(),
       modalPad: mobile ? '0' : '32px', modalH: mobile ? '100%' : 'auto', modalRadius: mobile ? '0' : 'var(--radius-lg)', closePos: mobile ? 'fixed' : 'absolute',
-      p: op ? { name: op.name, brand: op.brand, priceStr: brl(op.price), description: op.description, hasStatus: !!osi, statusLabel: osi ? osi[0] : '', statusColor: osi ? osi[1] : '' } : {},
+      p: op ? { name: op.name, brand: op.brand, priceStr: brl(fp(op)), oldPrice: brl(op.price), hasOff: dc(op) > 0, off: offLabel(op), priceColor: dc(op) ? '#8B4A2B' : '#2B1D14', description: op.description, hasStatus: !!osi, statusLabel: osi ? osi[0] : '', statusColor: osi ? osi[1] : '' } : {},
       mainImg: imgs[idx] || '', hasMain: !!imgs[idx], noMain: !imgs[idx],
       hasThumbs: imgs.length > 1, imgCounter: (idx + 1) + ' / ' + imgs.length,
       thumbs: imgs.map((src, i) => ({ src, border: i === idx ? '#8B4A2B' : 'transparent', opacity: i === idx ? 1 : 0.7, pick: () => this.setState({ img: i }) })),
@@ -491,7 +504,7 @@ class Component extends DCLogic {
       btnLabel, btnAction, btnDisabled, btnBg: btnDisabled ? '#A8927A' : '#8B4A2B', btnCursor: btnDisabled ? 'not-allowed' : 'pointer', chipJustify: mobile ? 'flex-start' : 'center',
       cartOpen: st.cartOpen, cartEmpty: items.length === 0, cartHas: items.length > 0,
       cartCountLabel: items.length === 1 ? '1 peça' : items.length + ' peças',
-      cartItems: items.map(p => ({ name: p.name, brand: p.brand, meta: 'Tam. ' + p.size + ' · ' + p.code, price: brl(p.price), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p), remove: () => this.setCart(st.cart.filter(x => x !== p.id)) })),
+      cartItems: items.map(p => ({ name: p.name, brand: p.brand, meta: 'Tam. ' + p.size + ' · ' + p.code, price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, cover: cover(p), hasCover: !!cover(p), noCover: !cover(p), remove: () => this.setCart(st.cart.filter(x => x !== p.id)) })),
       totalStr: brl(total), name: st.name, onName: e => this.setState({ name: e.target.value }), checkout,
       toast: st.toast, hasToast: !!st.toast,
       igUrl: 'https://instagram.com/' + ig, waUrl: m ? m.waLink(s.whatsapp, 'Oi, Isa! Vim pelo Desapega.') : '#'

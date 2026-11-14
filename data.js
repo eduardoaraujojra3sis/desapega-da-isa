@@ -171,3 +171,10 @@ export async function fetchStats(days, token) {
   const d = await r.json();
   return { por_dia: (d && d.por_dia) || [], por_peca: (d && d.por_peca) || [] };
 }
+
+// ---------- Desconto ----------
+export function discountOf(p) { const d = Number(p && p.discount); return isFinite(d) && d > 0 && d < 100 ? d : 0; }
+export function finalPrice(p) {
+  const price = Number(p && p.price) || 0, d = discountOf(p);
+  return d ? Math.round(price * (100 - d)) / 100 : price;
+}

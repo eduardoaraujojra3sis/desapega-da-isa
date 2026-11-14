@@ -493,9 +493,11 @@ class Component extends DCLogic {
     const statuses = m ? m.statuses : [];
     const sOf = v => statuses.find(x => x.v === v) || {};
     const cover = p => (p.images || [])[0] || '';
-    const saleValue = p => Number(p.soldPrice ?? p.price ?? 0) || 0;
+    const fp = p => m ? m.finalPrice(p) : Number(p.price || 0);
+    const dcOf = p => m ? m.discountOf(p) : 0;
+    const saleValue = p => Number(p.soldPrice ?? fp(p)) || 0;
     const withSale = (p, status) => status === 'vendido'
-      ? { ...p, status, soldAt: p.soldAt || Date.now(), soldPrice: p.soldPrice ?? p.price }
+      ? { ...p, status, soldAt: p.soldAt || Date.now(), soldPrice: p.soldPrice ?? fp(p) }
       : { ...p, status, soldAt: null, soldPrice: null };
 
     // ---------- estatísticas ----------
@@ -544,7 +546,7 @@ class Component extends DCLogic {
     ];
     const avail = products.filter(p => p.status === 'disponivel');
     const minis = [
-      { label: 'Disponíveis no closet', value: num(avail.length) + ' · ' + (brl(avail.reduce((a, p) => a + Number(p.price || 0), 0)) || 'R$ 0,00') },
+      { label: 'Disponíveis no closet', value: num(avail.length) + ' · ' + (brl(avail.reduce((a, p) => a + fp(p), 0)) || 'R$ 0,00') },
       { label: 'Reservadas', value: num(products.filter(p => p.status === 'reservado').length) },
       { label: 'Vendido desde o início', value: brl(revenueAll) || 'R$ 0,00' }
     ];
@@ -557,12 +559,12 @@ class Component extends DCLogic {
 
     const top = statsOk ? products.map(p => ({ p, s: ps(p.id) })).filter(x => Number(x.s.cliques) > 0)
       .sort((a, b) => b.s.cliques - a.s.cliques).slice(0, 8)
-      .map((x, i) => ({ rank: i + 1, name: x.p.name, price: brl(x.p.price), cover: cover(x.p), noCover: !cover(x.p), cliques: num(x.s.cliques), sacola: num(x.s.sacola), pedidos: num(x.s.pedidos), status: sOf(x.p.status).l, dot: sOf(x.p.status).c })) : [];
+      .map((x, i) => ({ rank: i + 1, name: x.p.name, price: brl(fp(x.p)), cover: cover(x.p), noCover: !cover(x.p), cliques: num(x.s.cliques), sacola: num(x.s.sacola), pedidos: num(x.s.pedidos), status: sOf(x.p.status).l, dot: sOf(x.p.status).c })) : [];
 
-    const edit = p => this.setState({ draft: { ...p, images: [...(p.images || [])], price: String(p.price ?? ''), soldPrice: p.soldPrice == null ? '' : String(p.soldPrice) }, formErr: '' });
+    const edit = p => this.setState({ draft: { ...p, images: [...(p.images || [])], price: String(p.price ?? ''), discount: p.discount ? String(p.discount) : '', soldPrice: p.soldPrice == null ? '' : String(p.soldPrice) }, formErr: '' });
     const attn = avail.filter(p => p.createdAt && Date.now() - p.createdAt > 30 * DAY && (!statsOk || Number(ps(p.id).cliques) < 3))
       .sort((a, b) => a.createdAt - b.createdAt).slice(0, 5)
-      .map(p => ({ name: p.name, cover: cover(p), noCover: !cover(p), meta: ago(p.createdAt) + (statsOk ? ' · ' + num(ps(p.id).cliques) + ' cliques no período' : '') + ' · ' + brl(p.price), edit: () => edit(p) }));
+      .map(p => ({ name: p.name, cover: cover(p), noCover: !cover(p), meta: ago(p.createdAt) + (statsOk ? ' · ' + num(ps(p.id).cliques) + ' cliques no período' : '') + ' · ' + brl(fp(p)), edit: () => edit(p) }));
     const recent = [...sold].sort((a, b) => (b.soldAt || 0) - (a.soldAt || 0)).slice(0, 5)
       .map(p => ({ name: p.name, cover: cover(p), noCover: !cover(p), value: brl(saleValue(p)), date: p.soldAt ? 'vendida em ' + new Date(p.soldAt).toLocaleDateString('pt-BR') : 'data da venda não registrada' }));
 
@@ -581,7 +583,7 @@ class Component extends DCLogic {
     const q = st.q.trim().toLowerCase();
     const shown = products.filter(p => (st.fStatus === 'todos' || p.status === st.fStatus) && (!q || [p.name, p.brand, p.code].join(' ').toLowerCase().includes(q)));
     const rows = shown.map(p => ({
-      name: p.name, meta: [p.brand, p.category, 'Tam. ' + p.size, p.code].filter(Boolean).join(' · '), price: brl(p.price),
+      name: p.name, meta: [p.brand, p.category, 'Tam. ' + p.size, p.code].filter(Boolean).join(' · '), price: dcOf(p) ? brl(fp(p)) + '  (−' + String(dcOf(p)).replace('.', ',') + '% · de ' + brl(p.price) + ')' : brl(p.price),
       cover: cover(p), hasCover: !!cover(p), noCover: !cover(p),
       status: p.status, dot: sOf(p.status).c,
       hasStats: statsOk, cliques: num(ps(p.id).cliques), sacola: num(ps(p.id).sacola),
@@ -601,15 +603,19 @@ class Component extends DCLogic {
     const dr = st.draft;
     const setD = (k, v) => this.setState(x => ({ draft: { ...x.draft, [k]: v } }));
     const opt = (a, cur) => (cur && !a.includes(cur) ? [...a, cur] : a).map(v => ({ v, l: v }));
+    const dPct = dr ? parseFloat(String(dr.discount ?? '').replace(',', '.')) : 0;
+    const dBase = dr ? parseFloat(String(dr.price ?? '').replace(',', '.')) : 0;
+    const draftHint = dr && dPct > 0 && dPct < 100 && isFinite(dBase) ? 'Na loja: ' + brl(Math.round(dBase * (100 - dPct)) / 100) + ' (de ' + brl(dBase) + ')' : 'Deixe em branco para vender pelo preço cheio.';
     const draftFields = dr ? [
       field(dr, setD, 'name', 'Nome da peça *', 'text', { full: true, ph: 'Ex.: Vestido midi de linho' }),
       field(dr, setD, 'brand', 'Marca', 'text', { ph: 'Ex.: Farm' }),
       field(dr, setD, 'price', 'Preço (R$) *', 'number', { ph: '0,00' }),
+      field(dr, setD, 'discount', 'Desconto (%)', 'number', { ph: 'Ex.: 20', hint: draftHint }),
       field(dr, setD, 'category', 'Categoria', 'select', { options: opt(s.categories || [], dr.category) }),
       field(dr, setD, 'size', 'Tamanho', 'select', { options: opt(s.sizes || [], dr.size) }),
       field(dr, setD, 'condition', 'Estado', 'select', { options: opt(m.conditions, dr.condition) }),
       field(dr, setD, 'status', 'Status', 'select', { options: statuses.map(x => ({ v: x.v, l: x.l })) }),
-      ...(dr.status === 'vendido' ? [field(dr, setD, 'soldPrice', 'Valor da venda (R$)', 'number', { ph: String(dr.price || '0,00'), hint: 'Se vendeu com desconto, coloque aqui o valor que recebeu. Em branco = preço da peça.' })] : []),
+      ...(dr.status === 'vendido' ? [field(dr, setD, 'soldPrice', 'Valor da venda (R$)', 'number', { ph: String(dr.price || '0,00'), hint: 'Valor que você recebeu de fato. Em branco = preço da loja (já com desconto).' })] : []),
       field(dr, setD, 'measures', 'Medidas', 'text', { full: true, ph: 'Ex.: Busto 88 cm · Cintura 70 cm · Comp. 110 cm' }),
       field(dr, setD, 'description', 'Descrição', 'area', { full: true, ph: 'Conta um pouquinho da peça: tecido, caimento, quantas vezes usou…' })
     ] : [];
@@ -623,8 +629,10 @@ class Component extends DCLogic {
       const price = parseFloat(String(dr.price).replace(',', '.'));
       if (!dr.name.trim()) return this.setState({ formErr: 'Dá um nome pra peça.' });
       if (!isFinite(price)) return this.setState({ formErr: 'Coloca um preço válido.' });
+      const disc = String(dr.discount ?? '').trim() === '' ? 0 : parseFloat(String(dr.discount).replace(',', '.'));
+      if (!isFinite(disc) || disc < 0 || disc >= 100) return this.setState({ formErr: 'O desconto precisa ser entre 0 e 99%.' });
       const sp = parseFloat(String(dr.soldPrice ?? '').replace(',', '.'));
-      let p = { ...dr, name: dr.name.trim(), price, soldPrice: isFinite(sp) ? sp : null };
+      let p = { ...dr, name: dr.name.trim(), price, discount: disc || null, soldPrice: isFinite(sp) ? sp : null };
       p = withSale(p, p.status);
       const exists = products.some(x => x.id === p.id);
       this.commit({ ...d, products: exists ? products.map(x => x.id === p.id ? p : x) : [p, ...products] }, exists ? 'Peça atualizada.' : 'Peça publicada na loja!').then(ok => ok && this.setState({ draft: null }));
@@ -691,7 +699,7 @@ class Component extends DCLogic {
       filters, q: st.q, onQ: e => this.setState({ q: e.target.value }),
       rows, noRows: !!d && rows.length === 0, noRowsText: products.length ? 'Nenhuma peça encontrada com esse filtro.' : 'Seu closet está vazio. Clique em "Nova peça" para começar!',
       statusOpts: statuses.map(x => ({ v: x.v, l: x.l })),
-      newProduct: () => this.setState({ formErr: '', draft: { id: m.uid(), code: m.nextCode(products), name: '', brand: '', category: (s.categories || [])[0] || '', size: (s.sizes || [])[0] || '', condition: 'Seminova', price: '', soldPrice: '', measures: '', description: '', status: 'disponivel', images: [], createdAt: Date.now() } }),
+      newProduct: () => this.setState({ formErr: '', draft: { id: m.uid(), code: m.nextCode(products), name: '', brand: '', category: (s.categories || [])[0] || '', size: (s.sizes || [])[0] || '', condition: 'Seminova', price: '', discount: '', soldPrice: '', measures: '', description: '', status: 'disponivel', images: [], createdAt: Date.now() } }),
       hasDraft: !!dr, draftTitle: dr && products.some(x => x.id === dr.id) ? 'Editar peça' : 'Nova peça', draftCode: dr ? 'Código ' + dr.code : '',
       draftFields, draftImgs, uploadLabel: st.uploading ? 'Enviando…' : 'Adicionar fotos',
       addImgs: async e => { const r = await this.readImgs(e.target.files); e.target.value = ''; this.setState(x => ({ draft: { ...x.draft, images: [...x.draft.images, ...r] } })); },
