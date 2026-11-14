@@ -367,15 +367,22 @@
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
               <span class="label">FOTOS</span>
-              <span style="font-size:12px;color:var(--muted);">A primeira é a capa. Toque numa foto para torná-la capa · o botão no canto ajusta zoom e posição.</span>
+              <span style="font-size:12px;color:var(--muted);">A primeira é a capa. Arraste as fotos ou use as setas para mudar a ordem · toque numa foto para torná-la capa.</span>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <sc-for list="{{ draftImgs }}" as="im">
+                <div class="media-item {{ im.dropCls }}" draggable="true" onDragStart="{{ im.dragStart }}" onDragOver="{{ im.dragOver }}" onDragLeave="{{ im.dragLeave }}" onDrop="{{ im.drop }}" onDragEnd="{{ dragEnd }}">
                 <div class="photo" style="outline:2px solid {{ im.outline }};outline-offset:2px;">
-                  <img src="{{ im.src }}" alt="" onClick="{{ im.cover }}" style="{{ im.style }}">
+                  <img src="{{ im.src }}" alt="" draggable="false" onClick="{{ im.cover }}" style="{{ im.style }}">
                   <button onClick="{{ im.adjust }}" aria-label="Ajustar enquadramento" title="Ajustar enquadramento" class="adj-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></button>
                   <sc-if value="{{ im.isCover }}"><span class="cover">Capa</span></sc-if>
                   <button onClick="{{ im.remove }}" aria-label="Remover foto" class="rm">×</button>
+                </div>
+                <div class="move-row">
+                  <button onClick="{{ im.left }}" disabled="{{ im.first }}" aria-label="Mover para a esquerda" title="Mover para a esquerda"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                  <span>{{ im.pos }}</span>
+                  <button onClick="{{ im.right }}" disabled="{{ im.last }}" aria-label="Mover para a direita" title="Mover para a direita"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+                </div>
                 </div>
               </sc-for>
               <label class="photo-add">
@@ -391,10 +398,17 @@
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <sc-for list="{{ draftVids }}" as="v">
+                <div class="media-item">
                 <div class="photo">
                   <video src="{{ v.thumb }}" muted="{{ true }}" playsinline="{{ true }}" preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
                   <a href="{{ v.src }}" target="_blank" rel="noopener" class="vid-play" aria-label="Assistir vídeo"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></a>
                   <button onClick="{{ v.remove }}" aria-label="Remover vídeo" class="rm">×</button>
+                </div>
+                <div class="move-row">
+                  <button onClick="{{ v.left }}" disabled="{{ v.first }}" aria-label="Mover para a esquerda"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                  <span>{{ v.pos }}</span>
+                  <button onClick="{{ v.right }}" disabled="{{ v.last }}" aria-label="Mover para a direita"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+                </div>
                 </div>
               </sc-for>
               <sc-if value="{{ canAddVideo }}">
@@ -509,7 +523,7 @@ const pct = (a, b) => b ? (a / b * 100).toLocaleString('pt-BR', { maximumFractio
 const ago = t => { if (!t) return ''; const d = Math.floor((Date.now() - t) / DAY); return d <= 0 ? 'no ar desde hoje' : d === 1 ? 'no ar há 1 dia' : 'no ar há ' + d + ' dias'; };
 
 class Component extends DCLogic {
-  state = { data: null, authed: false, saving: false, upDone: 0, vidPct: -1, email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
+  state = { data: null, authed: false, saving: false, upDone: 0, vidPct: -1, dropAt: -1, email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
   async componentDidMount() {
     this.m = await import(new URL('data.js', document.baseURI).href);
     sessionStorage.removeItem('isa-admin-token');
@@ -748,7 +762,15 @@ class Component extends DCLogic {
       field(dr, setD, 'description', 'Descrição', 'area', { full: true, ph: 'Conta um pouquinho da peça: tecido, caimento, quantas vezes usou…' })
     ] : [];
     const imgs = dr ? dr.images : [];
+    const moveTo = (arr, from, to) => { const a = [...arr]; const [x] = a.splice(from, 1); a.splice(to, 0, x); return a; };
     const draftImgs = imgs.map((src, i) => ({
+      pos: (i + 1) + 'ª', first: i === 0, last: i === imgs.length - 1,
+      left: () => setD('images', moveTo(imgs, i, i - 1)), right: () => setD('images', moveTo(imgs, i, i + 1)),
+      dropCls: st.dropAt === i && this.dragFrom !== i ? 'drop-here' : '',
+      dragStart: e => { this.dragFrom = i; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (x) {} },
+      dragOver: e => { if (this.dragFrom == null) return; e.preventDefault(); if (st.dropAt !== i) this.setState({ dropAt: i }); },
+      dragLeave: () => { if (st.dropAt === i) this.setState({ dropAt: -1 }); },
+      drop: e => { e.preventDefault(); const from = this.dragFrom; this.dragFrom = null; this.setState({ dropAt: -1 }); if (from != null && from !== i) setD('images', moveTo(imgs, from, i)); },
       src, style: ist(dr, src), adjust: () => this.setState({ adj: { kind: 'draft', src, aspect: '2/3', ...((dr.imgAdj || {})[src] || { z: 1, x: 50, y: 50 }) } }), isCover: i === 0, outline: i === 0 ? 'var(--accent)' : 'transparent',
       cover: () => setD('images', [src, ...imgs.filter((_, j) => j !== i)]),
       remove: () => setD('images', imgs.filter((_, j) => j !== i))
@@ -862,9 +884,10 @@ class Component extends DCLogic {
       statusOpts: statuses.map(x => ({ v: x.v, l: x.l })),
       newProduct: () => this.setState({ formErr: '', draft: { id: m.uid(), code: m.nextCode(products), name: '', brand: '', category: (s.categories || [])[0] || '', size: (s.sizes || [])[0] || '', condition: 'Seminova', price: '', discount: '', soldPrice: '', measures: '', description: '', status: 'disponivel', images: [], videos: [], createdAt: Date.now() } }),
       hasDraft: !!dr, draftTitle: dr && products.some(x => x.id === dr.id) ? 'Editar peça' : 'Nova peça', draftCode: dr ? 'Código ' + dr.code : '',
+      dragEnd: () => { this.dragFrom = null; if (st.dropAt !== -1) this.setState({ dropAt: -1 }); },
       draftFields, draftImgs, uploadLabel: st.uploading ? 'Enviando ' + Math.min(st.upDone + 1, st.uploading) + ' de ' + st.uploading + '…' : 'Adicionar fotos',
       saveLabel: st.uploading ? 'Aguarde as fotos…' : st.vidPct >= 0 ? 'Aguarde o vídeo…' : st.saving ? 'Salvando…' : 'Salvar peça', saveBlocked: !!st.uploading || st.vidPct >= 0 || st.saving,
-      draftVids: dr ? (dr.videos || []).map((src, i) => ({ src, thumb: src + '#t=0.1', remove: () => setD('videos', (dr.videos || []).filter((_, j) => j !== i)) })) : [],
+      draftVids: dr ? (dr.videos || []).map((src, i, vs) => ({ src, thumb: src + '#t=0.1', pos: (i + 1) + 'º', first: i === 0, last: i === vs.length - 1, left: () => setD('videos', moveTo(vs, i, i - 1)), right: () => setD('videos', moveTo(vs, i, i + 1)), remove: () => setD('videos', (dr.videos || []).filter((_, j) => j !== i)) })) : [],
       canAddVideo: !!dr && ((dr.videos || []).length < 3 || st.vidPct >= 0),
       videoLabel: st.vidPct >= 0 ? 'Enviando ' + st.vidPct + '%' : 'Adicionar vídeo',
       videoHint: 'Até 3 vídeos por peça · máx. ' + (m ? m.MAX_VIDEO_MB : 50) + ' MB cada · de preferência MP4',

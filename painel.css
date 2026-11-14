@@ -281,3 +281,14 @@ select.input { appearance: none; -webkit-appearance: none; padding-right: 36px; 
 
 .vid-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(43,29,20,.3); color: #FBF6EE; }
 .vid-play:hover { background: rgba(43,29,20,.45); color: #fff; }
+
+/* ---------- ordem das fotos ---------- */
+.media-item { display: flex; flex-direction: column; gap: 6px; align-items: center; border-radius: 14px; transition: transform .15s; }
+.media-item[draggable="true"] .photo { cursor: grab; }
+.media-item.drop-here { transform: scale(1.04); }
+.media-item.drop-here .photo { box-shadow: 0 0 0 3px var(--accent); }
+.move-row { display: flex; align-items: center; gap: 4px; }
+.move-row span { min-width: 26px; text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); font-feature-settings: 'tnum'; }
+.move-row button { width: 30px; height: 26px; border-radius: 999px; border: 1px solid var(--line-2); background: #FFFDF9; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.move-row button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.move-row button:disabled { opacity: .3; cursor: default; }
