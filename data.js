@@ -80,18 +80,6 @@ async function looksHeic(file) {
   if (/image\/hei[cf]/i.test(file.type || '') || /\.hei[cf]$/i.test(file.name || '')) return true;
   try { const head = new Uint8Array(await file.slice(0, 32).arrayBuffer()); const t = String.fromCharCode(...head.slice(4, 12)); return /ftyp(heic|heix|hevc|heim|heis|mif1|msf1)/.test(t); } catch (e) { return false; }
 }
-let heicLib = null;
-function loadHeicLib() {
-  if (window.heic2any) return Promise.resolve(window.heic2any);
-  if (!heicLib) heicLib = new Promise((res, rej) => {
-    const sc = document.createElement('script');
-    sc.src = new URL('heic2any.min.js', document.baseURI).href;
-    sc.onload = () => window.heic2any ? res(window.heic2any) : rej(new Error('formato'));
-    sc.onerror = () => { heicLib = null; rej(new Error('formato')); };
-    document.head.appendChild(sc);
-  });
-  return heicLib;
-}
 function decodeToDataURL(blob, max, q) {
   return new Promise((res, rej) => {
     const url = URL.createObjectURL(blob);
@@ -112,12 +100,17 @@ export async function compressImage(file, max = 1500, q = 0.8) {
   // 1) tenta abrir direto (Safari já abre HEIC sozinho)
   try { return await decodeToDataURL(file, max, q); }
   catch (e) { if (!(await looksHeic(file))) throw new Error('formato'); }
-  // 2) HEIC no Chrome/Android/Windows: converte para JPG antes
-  const heic2any = await loadHeicLib();
-  let out;
-  try { out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }); }
-  catch (e) { throw new Error('formato'); }
-  return decodeToDataURL(Array.isArray(out) ? out[0] : out, max, q);
+  // 2) HEIC no Chrome/Android/Windows: converte para JPG com o heic-to (libheif atual,
+  //    lê as fotos dos iPhones novos). O conversor só é baixado quando aparece uma foto HEIC.
+  let jpg;
+  try {
+    const lib = await import(new URL('heic-to.min.js', document.baseURI).href);
+    jpg = await Promise.race([
+      lib.heicTo({ blob: file, type: 'image/jpeg', quality: 0.92 }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('tempo esgotado')), 90000))
+    ]);
+  } catch (e) { console.error('Não consegui converter o HEIC', file && file.name, e); throw new Error('formato'); }
+  return decodeToDataURL(jpg, max, q);
 }
 
 export const remote = !!(SUPABASE_URL && SUPABASE_ANON_KEY);

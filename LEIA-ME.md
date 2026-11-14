@@ -8,7 +8,7 @@ Site estático, sem etapa de build. Todos os arquivos ficam juntos na mesma past
 - `data.js`: leitura e gravação no Supabase
 - `dc-lite.js` e `preact-htm.js`: o motor das páginas
 - `painel.css`: estilos do painel
-- `heic2any.min.js`: converte fotos HEIC do iPhone (só é carregado quando a foto é HEIC)
+- `heic-to.min.js`: converte fotos HEIC do iPhone (só é carregado quando a foto é HEIC)
 
 ## Publicar no Netlify
 
