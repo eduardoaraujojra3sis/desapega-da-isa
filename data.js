@@ -75,24 +75,49 @@ export function nextCode(products) {
   return 'DI-' + String(n).padStart(3, '0');
 }
 
-export function compressImage(file, max = 1500, q = 0.8) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onerror = () => rej(new Error('leitura'));
-    r.onload = () => {
-      const img = new Image();
-      img.onerror = () => rej(new Error('formato'));
-      img.onload = () => {
-        const k = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        res(c.toDataURL('image/jpeg', q));
-      };
-      img.src = r.result;
-    };
-    r.readAsDataURL(file);
+// ---------- Fotos: aceita JPG, PNG, WEBP e HEIC/HEIF (iPhone) ----------
+async function looksHeic(file) {
+  if (/image\/hei[cf]/i.test(file.type || '') || /\.hei[cf]$/i.test(file.name || '')) return true;
+  try { const head = new Uint8Array(await file.slice(0, 32).arrayBuffer()); const t = String.fromCharCode(...head.slice(4, 12)); return /ftyp(heic|heix|hevc|heim|heis|mif1|msf1)/.test(t); } catch (e) { return false; }
+}
+let heicLib = null;
+function loadHeicLib() {
+  if (window.heic2any) return Promise.resolve(window.heic2any);
+  if (!heicLib) heicLib = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = new URL('heic2any.min.js', document.baseURI).href;
+    sc.onload = () => window.heic2any ? res(window.heic2any) : rej(new Error('formato'));
+    sc.onerror = () => { heicLib = null; rej(new Error('formato')); };
+    document.head.appendChild(sc);
   });
+  return heicLib;
+}
+function decodeToDataURL(blob, max, q) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('formato')); };
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', q));
+    };
+    img.src = url;
+  });
+}
+export async function compressImage(file, max = 1500, q = 0.8) {
+  // 1) tenta abrir direto (Safari já abre HEIC sozinho)
+  try { return await decodeToDataURL(file, max, q); }
+  catch (e) { if (!(await looksHeic(file))) throw new Error('formato'); }
+  // 2) HEIC no Chrome/Android/Windows: converte para JPG antes
+  const heic2any = await loadHeicLib();
+  let out;
+  try { out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }); }
+  catch (e) { throw new Error('formato'); }
+  return decodeToDataURL(Array.isArray(out) ? out[0] : out, max, q);
 }
 
 export const remote = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
@@ -150,13 +175,16 @@ async function token(force) {
 }
 // Só é problema de login quando a resposta fala do token (vencido/inválido).
 // "permission denied" (falta de permissão no banco) NÃO desloga — vira erro 'negado'.
+function isAuthText(status, t) {
+  if (status !== 401 && status !== 403 && status !== 400) return false;
+  if (/42501|permission denied|row-level security/i.test(t || '')) return false;
+  if (status === 401) return true;
+  return /jwt|expired|invalid.*token|token.*invalid|PGRST30[0-9]|signature/i.test(t || '');
+}
 async function isAuthErr(r) {
-  if (r.status !== 401 && r.status !== 403 && r.status !== 400) return false;
   let t = '';
   try { t = await r.clone().text(); } catch (e) {}
-  if (/42501|permission denied|row-level security/i.test(t)) return false;
-  if (r.status === 401) return true;
-  return /jwt|expired|invalid.*token|token.*invalid|PGRST30[0-9]|signature/i.test(t);
+  return isAuthText(r.status, t);
 }
 async function authed(doFetch) {
   const run = async t => { try { return await doFetch(t); } catch (e) { throw new Error('rede'); } };
@@ -267,4 +295,34 @@ export function igHandle(v) {
   const m = s.match(/instagram\.com\/([^/?#\s]+)/i);
   if (m) s = m[1];
   return s.replace(/^@/, '').trim();
+}
+
+// ---------- Vídeos das peças ----------
+export const MAX_VIDEO_MB = 50; // limite de upload do plano gratuito do Supabase
+export function uploadVideo(file, onProgress) {
+  const ext = ((file.name || '').split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4';
+  const name = 'v-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '.' + ext;
+  const send = t => new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open('POST', SUPABASE_URL + '/storage/v1/object/fotos/' + name);
+    x.setRequestHeader('apikey', SUPABASE_ANON_KEY);
+    x.setRequestHeader('Authorization', 'Bearer ' + t);
+    x.setRequestHeader('Content-Type', file.type || 'video/mp4');
+    x.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(Math.round(e.loaded / e.total * 100)); };
+    x.onload = () => res({ status: x.status, text: x.responseText || '' });
+    x.onerror = () => rej(new Error('rede'));
+    x.send(file);
+  });
+  return (async () => {
+    let r = await send(await token());
+    if (isAuthText(r.status, r.text)) {
+      r = await send(await token(true));
+      if (isAuthText(r.status, r.text)) { const e = new Error('negado'); e.detail = r.text.slice(0, 160); throw e; }
+    }
+    if (r.status === 413 || /maximum allowed size|too large|exceeded/i.test(r.text)) throw new Error('grande');
+    if (/mime/i.test(r.text)) throw new Error('tipo');
+    if (r.status === 401 || r.status === 403 || /42501|row-level security/i.test(r.text)) { const e = new Error('negado'); e.detail = r.text.slice(0, 160); throw e; }
+    if (r.status < 200 || r.status >= 300) { const e = new Error('upload'); e.detail = r.text.slice(0, 160); throw e; }
+    return SUPABASE_URL + '/storage/v1/object/public/fotos/' + name;
+  })();
 }

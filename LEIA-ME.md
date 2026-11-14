@@ -8,6 +8,7 @@ Site estático, sem etapa de build. Todos os arquivos ficam juntos na mesma past
 - `data.js`: leitura e gravação no Supabase
 - `dc-lite.js` e `preact-htm.js`: o motor das páginas
 - `painel.css`: estilos do painel
+- `heic2any.min.js`: converte fotos HEIC do iPhone (só é carregado quando a foto é HEIC)
 
 ## Publicar no Netlify
 
@@ -121,3 +122,7 @@ Observações:
 ## Links das fotos no WhatsApp
 
 Na mensagem do pedido, o link da foto usa o endereço do próprio site (`/foto/nome.jpg`). Os arquivos `vercel.json` (Vercel) e `_redirects` (Netlify) fazem esse endereço buscar a foto no armazenamento. Se trocar de projeto no Supabase, atualize o endereço nesses dois arquivos também.
+
+## Configuração completa do Supabase (recomendado)
+
+O arquivo `supabase-setup.sql` reúne tudo: tabela da loja, fotos, estatísticas e todas as permissões. Copie o conteúdo inteiro, cole no SQL Editor do Supabase e clique em Run. Se aparecer o aviso "Potential issue detected", pode confirmar em "Run query": o SQL só recria as regras de permissão e não apaga dados. Ele pode ser rodado de novo sempre que quiser.

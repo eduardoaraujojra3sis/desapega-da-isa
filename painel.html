@@ -310,7 +310,7 @@
                             <sc-if value="{{ im.none }}"><div class="thumb-empty"></div></sc-if>
                           </div>
                           <div style="display:flex;flex-direction:column;gap:6px;">
-                            <label class="btn" style="cursor:pointer;">Escolher foto<input type="file" accept="image/*" onChange="{{ im.upload }}" style="display:none;"></label>
+                            <label class="btn" style="cursor:pointer;">Escolher foto<input type="file" accept="image/*,.heic,.heif" onChange="{{ im.upload }}" style="display:none;"></label>
                             <sc-if value="{{ im.has }}"><button onClick="{{ im.adjust }}" class="btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>Ajustar enquadramento</button></sc-if>
                             <sc-if value="{{ im.has }}"><button onClick="{{ im.clear }}" class="btn btn-danger">Remover</button></sc-if>
                           </div>
@@ -380,8 +380,29 @@
               </sc-for>
               <label class="photo-add">
                 <span style="font-size:26px;line-height:1;">+</span>{{ uploadLabel }}
-                <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ addImgs }}" style="display:none;">
+                <input type="file" accept="image/*,.heic,.heif" multiple="{{ true }}" onChange="{{ addImgs }}" style="display:none;">
               </label>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
+              <span class="label">VÍDEOS</span>
+              <span style="font-size:12px;color:var(--muted);">{{ videoHint }}</span>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <sc-for list="{{ draftVids }}" as="v">
+                <div class="photo">
+                  <video src="{{ v.thumb }}" muted="{{ true }}" playsinline="{{ true }}" preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+                  <a href="{{ v.src }}" target="_blank" rel="noopener" class="vid-play" aria-label="Assistir vídeo"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></a>
+                  <button onClick="{{ v.remove }}" aria-label="Remover vídeo" class="rm">×</button>
+                </div>
+              </sc-for>
+              <sc-if value="{{ canAddVideo }}">
+                <label class="photo-add">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>{{ videoLabel }}
+                  <input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" onChange="{{ addVideo }}" style="display:none;">
+                </label>
+              </sc-if>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px;">
@@ -488,7 +509,7 @@ const pct = (a, b) => b ? (a / b * 100).toLocaleString('pt-BR', { maximumFractio
 const ago = t => { if (!t) return ''; const d = Math.floor((Date.now() - t) / DAY); return d <= 0 ? 'no ar desde hoje' : d === 1 ? 'no ar há 1 dia' : 'no ar há ' + d + ' dias'; };
 
 class Component extends DCLogic {
-  state = { data: null, authed: false, saving: false, upDone: 0, email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
+  state = { data: null, authed: false, saving: false, upDone: 0, vidPct: -1, email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
   async componentDidMount() {
     this.m = await import(new URL('data.js', document.baseURI).href);
     sessionStorage.removeItem('isa-admin-token');
@@ -500,7 +521,7 @@ class Component extends DCLogic {
     if (authed) { this.m.markAdmin(); this.loadStats(this.state.period); }
     this.onResize = () => this.setState({ w: window.innerWidth });
     window.addEventListener('resize', this.onResize);
-    this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft && !this.state.uploading) this.setState({ draft: null }); };
+    this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft && !this.state.uploading && this.state.vidPct < 0) this.setState({ draft: null }); };
     window.addEventListener('keydown', this.onKey);
     this.onStorage = e => { if (e.key === 'isa-admin-session' && this.m.remote) { const on = !!this.m.getSession(); if (on !== this.state.authed) this.setState({ authed: on }); } };
     window.addEventListener('storage', this.onStorage);
@@ -537,6 +558,23 @@ class Component extends DCLogic {
     this.toast('Sem espaço para salvar. Tente fotos menores ou exclua peças vendidas.');
     return false;
   }
+  async readVideo(file) {
+    const m = this.m;
+    if (!file) return null;
+    if (!m.remote) { this.toast('Vídeos só funcionam com a loja conectada ao Supabase.'); return null; }
+    if (file.type && !file.type.startsWith('video/')) { this.toast('Esse arquivo não é um vídeo.'); return null; }
+    const mb = file.size / 1048576;
+    if (mb > m.MAX_VIDEO_MB) { this.toast('Vídeo muito grande (' + mb.toFixed(0) + ' MB). O limite é ' + m.MAX_VIDEO_MB + ' MB — grave em 1080p ou corte um trecho mais curto.'); return null; }
+    this.setState({ vidPct: 0 });
+    try { const url = await m.uploadVideo(file, pct => this.setState({ vidPct: pct })); this.setState({ vidPct: -1 }); return url; }
+    catch (e) {
+      this.setState({ vidPct: -1 });
+      console.error('Falha ao enviar vídeo', e.detail || e);
+      if (e.message === 'sessao' && !m.getSession()) this.expired();
+      else this.toast({ grande: 'O Supabase recusou o vídeo por ser grande demais (máx. ' + m.MAX_VIDEO_MB + ' MB).', tipo: 'O bucket "fotos" não aceita vídeos: rode de novo o supabase-setup.sql.', rede: 'A internet caiu no meio do envio do vídeo — tente de novo.', negado: 'O Supabase recusou o envio (permissão do bucket "fotos"). Rode o supabase-setup.sql.' }[e.message] || 'O vídeo não pôde ser enviado. Tente de novo.');
+      return null;
+    }
+  }
   async readImgs(files) {
     const list = Array.from(files || []);
     if (!list.length) return [];
@@ -562,7 +600,7 @@ class Component extends DCLogic {
     this.setState({ uploading: 0, upDone: 0 });
     if (lost) this.expired();
     else if (fails.length) {
-      const why = fails.includes('formato') ? ' O formato não é aceito (fotos HEIC do iPhone): salve como JPG e tente de novo.'
+      const why = fails.includes('formato') ? ' O arquivo não é uma imagem válida (aceitos: JPG, PNG, WEBP e HEIC).'
         : fails.includes('rede') ? ' A internet caiu no meio do envio — tente de novo.' : fails.includes('negado') ? ' O Supabase recusou o envio (permissão do bucket "fotos"). Confira as políticas do LEIA-ME.' : ' Tente enviar de novo.';
       this.toast((fails.length === 1 ? '1 foto não foi enviada.' : fails.length + ' fotos não foram enviadas.') + why);
     }
@@ -646,7 +684,7 @@ class Component extends DCLogic {
       .sort((a, b) => b.s.cliques - a.s.cliques).slice(0, 8)
       .map((x, i) => ({ rank: i + 1, name: x.p.name, price: brl(fp(x.p)), style: ist(x.p, cover(x.p)), cover: cover(x.p), noCover: !cover(x.p), cliques: num(x.s.cliques), sacola: num(x.s.sacola), pedidos: num(x.s.pedidos), status: sOf(x.p.status).l, dot: sOf(x.p.status).c })) : [];
 
-    const edit = p => this.setState({ draft: { ...p, images: [...(p.images || [])], price: String(p.price ?? ''), discount: p.discount ? String(p.discount) : '', soldPrice: p.soldPrice == null ? '' : String(p.soldPrice) }, formErr: '' });
+    const edit = p => this.setState({ draft: { ...p, images: [...(p.images || [])], videos: [...(p.videos || [])], price: String(p.price ?? ''), discount: p.discount ? String(p.discount) : '', soldPrice: p.soldPrice == null ? '' : String(p.soldPrice) }, formErr: '' });
     const attn = avail.filter(p => p.createdAt && Date.now() - p.createdAt > 30 * DAY && (!statsOk || Number(ps(p.id).cliques) < 3))
       .sort((a, b) => a.createdAt - b.createdAt).slice(0, 5)
       .map(p => ({ name: p.name, style: ist(p, cover(p)), cover: cover(p), noCover: !cover(p), meta: ago(p.createdAt) + (statsOk ? ' · ' + num(ps(p.id).cliques) + ' cliques no período' : '') + ' · ' + brl(fp(p)), edit: () => edit(p) }));
@@ -716,7 +754,7 @@ class Component extends DCLogic {
       remove: () => setD('images', imgs.filter((_, j) => j !== i))
     }));
     const saveDraft = () => {
-      if (st.uploading) return this.setState({ formErr: 'Espere as fotos terminarem de enviar.' });
+      if (st.uploading || st.vidPct >= 0) return this.setState({ formErr: 'Espere o envio das fotos e vídeos terminar.' });
       if (st.saving) return;
       const price = parseFloat(String(dr.price).replace(',', '.'));
       if (!dr.name.trim()) return this.setState({ formErr: 'Dá um nome pra peça.' });
@@ -822,13 +860,18 @@ class Component extends DCLogic {
       filters, q: st.q, onQ: e => this.setState({ q: e.target.value }),
       rows, noRows: !!d && rows.length === 0, noRowsText: products.length ? 'Nenhuma peça encontrada com esse filtro.' : 'Seu closet está vazio. Clique em "Nova peça" para começar!',
       statusOpts: statuses.map(x => ({ v: x.v, l: x.l })),
-      newProduct: () => this.setState({ formErr: '', draft: { id: m.uid(), code: m.nextCode(products), name: '', brand: '', category: (s.categories || [])[0] || '', size: (s.sizes || [])[0] || '', condition: 'Seminova', price: '', discount: '', soldPrice: '', measures: '', description: '', status: 'disponivel', images: [], createdAt: Date.now() } }),
+      newProduct: () => this.setState({ formErr: '', draft: { id: m.uid(), code: m.nextCode(products), name: '', brand: '', category: (s.categories || [])[0] || '', size: (s.sizes || [])[0] || '', condition: 'Seminova', price: '', discount: '', soldPrice: '', measures: '', description: '', status: 'disponivel', images: [], videos: [], createdAt: Date.now() } }),
       hasDraft: !!dr, draftTitle: dr && products.some(x => x.id === dr.id) ? 'Editar peça' : 'Nova peça', draftCode: dr ? 'Código ' + dr.code : '',
       draftFields, draftImgs, uploadLabel: st.uploading ? 'Enviando ' + Math.min(st.upDone + 1, st.uploading) + ' de ' + st.uploading + '…' : 'Adicionar fotos',
-      saveLabel: st.uploading ? 'Aguarde as fotos…' : st.saving ? 'Salvando…' : 'Salvar peça', saveBlocked: !!st.uploading || st.saving,
+      saveLabel: st.uploading ? 'Aguarde as fotos…' : st.vidPct >= 0 ? 'Aguarde o vídeo…' : st.saving ? 'Salvando…' : 'Salvar peça', saveBlocked: !!st.uploading || st.vidPct >= 0 || st.saving,
+      draftVids: dr ? (dr.videos || []).map((src, i) => ({ src, thumb: src + '#t=0.1', remove: () => setD('videos', (dr.videos || []).filter((_, j) => j !== i)) })) : [],
+      canAddVideo: !!dr && ((dr.videos || []).length < 3 || st.vidPct >= 0),
+      videoLabel: st.vidPct >= 0 ? 'Enviando ' + st.vidPct + '%' : 'Adicionar vídeo',
+      videoHint: 'Até 3 vídeos por peça · máx. ' + (m ? m.MAX_VIDEO_MB : 50) + ' MB cada · de preferência MP4',
+      addVideo: async e => { const f = (e.target.files || [])[0]; e.target.value = ''; if (st.vidPct >= 0) return; const url = await this.readVideo(f); if (url) this.setState(x => x.draft ? { draft: { ...x.draft, videos: [...(x.draft.videos || []), url] } } : null); },
       settingsLabel: st.uploading ? 'Aguarde a foto…' : st.saving ? 'Salvando…' : 'Salvar alterações',
       addImgs: async e => { const files = Array.from(e.target.files || []); e.target.value = ''; const r = await this.readImgs(files); if (r.length) this.setState(x => x.draft ? { draft: { ...x.draft, images: [...x.draft.images, ...r] } } : null); },
-      saveDraft, closeDraft: () => { if (st.uploading && !confirm('As fotos ainda estão sendo enviadas. Fechar mesmo assim?')) return; this.setState({ draft: null }); }, stop: e => e.stopPropagation(), formErr: st.formErr,
+      saveDraft, closeDraft: () => { if ((st.uploading || st.vidPct >= 0) && !confirm('As fotos ainda estão sendo enviadas. Fechar mesmo assim?')) return; this.setState({ draft: null }); }, stop: e => e.stopPropagation(), formErr: st.formErr,
       groups,
       saveSettings: () => { if (st.uploading || st.saving) return; if (!m.remote && !sd.password) return this.toast('A senha não pode ficar vazia.'); this.commit({ ...d, settings: sd }, 'Salvo! Já está na loja.'); },
       exportData: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(d)], { type: 'application/json' })); a.download = 'desapega-da-isa-backup.json'; a.click(); },
