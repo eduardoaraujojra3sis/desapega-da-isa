@@ -172,7 +172,7 @@
                       <sc-for list="{{ top }}" as="t">
                         <tr>
                           <td class="rank">{{ t.rank }}</td>
-                          <td><div class="cell-prod"><div class="thumb"><sc-if value="{{ t.cover }}"><img src="{{ t.cover }}" alt=""></sc-if><sc-if value="{{ t.noCover }}"><div class="thumb-empty"></div></sc-if></div><div style="min-width:0;"><b>{{ t.name }}</b><small>{{ t.price }}</small></div></div></td>
+                          <td><div class="cell-prod"><div class="thumb"><sc-if value="{{ t.cover }}"><img src="{{ t.cover }}" alt="" style="{{ t.style }}"></sc-if><sc-if value="{{ t.noCover }}"><div class="thumb-empty"></div></sc-if></div><div style="min-width:0;"><b>{{ t.name }}</b><small>{{ t.price }}</small></div></div></td>
                           <td class="num"><b>{{ t.cliques }}</b></td>
                           <td class="num">{{ t.sacola }}</td>
                           <td class="num hide-sm">{{ t.pedidos }}</td>
@@ -193,7 +193,7 @@
                   <div class="list">
                     <sc-for list="{{ attn }}" as="a">
                       <div class="list-row">
-                        <div class="thumb"><sc-if value="{{ a.cover }}"><img src="{{ a.cover }}" alt=""></sc-if><sc-if value="{{ a.noCover }}"><div class="thumb-empty"></div></sc-if></div>
+                        <div class="thumb"><sc-if value="{{ a.cover }}"><img src="{{ a.cover }}" alt="" style="{{ a.style }}"></sc-if><sc-if value="{{ a.noCover }}"><div class="thumb-empty"></div></sc-if></div>
                         <div class="grow"><b>{{ a.name }}</b><small>{{ a.meta }}</small></div>
                         <button onClick="{{ a.edit }}" class="btn">Editar</button>
                       </div>
@@ -210,7 +210,7 @@
                   <div class="list">
                     <sc-for list="{{ recent }}" as="r">
                       <div class="list-row">
-                        <div class="thumb"><sc-if value="{{ r.cover }}"><img src="{{ r.cover }}" alt=""></sc-if><sc-if value="{{ r.noCover }}"><div class="thumb-empty"></div></sc-if></div>
+                        <div class="thumb"><sc-if value="{{ r.cover }}"><img src="{{ r.cover }}" alt="" style="{{ r.style }}"></sc-if><sc-if value="{{ r.noCover }}"><div class="thumb-empty"></div></sc-if></div>
                         <div class="grow"><b>{{ r.name }}</b><small>{{ r.date }}</small></div>
                         <b style="font-feature-settings:'tnum';white-space:nowrap;">{{ r.value }}</b>
                       </div>
@@ -248,7 +248,7 @@
             <div class="card" style="overflow:hidden;">
               <sc-for list="{{ rows }}" as="r">
                 <div class="prow">
-                  <div class="thumb" onClick="{{ r.edit }}"><sc-if value="{{ r.hasCover }}"><img src="{{ r.cover }}" alt=""></sc-if><sc-if value="{{ r.noCover }}"><div class="thumb-empty"></div></sc-if></div>
+                  <div class="thumb" onClick="{{ r.edit }}"><sc-if value="{{ r.hasCover }}"><img src="{{ r.cover }}" alt="" style="{{ r.style }}"></sc-if><sc-if value="{{ r.noCover }}"><div class="thumb-empty"></div></sc-if></div>
                   <div class="prow-info">
                     <b>{{ r.name }}</b>
                     <small>{{ r.meta }}</small>
@@ -306,11 +306,12 @@
                         <span class="label">{{ im.label }}</span>
                         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
                           <div class="photo-box">
-                            <sc-if value="{{ im.has }}"><img src="{{ im.src }}" alt=""></sc-if>
+                            <sc-if value="{{ im.has }}"><img src="{{ im.src }}" alt="" style="{{ im.style }}"></sc-if>
                             <sc-if value="{{ im.none }}"><div class="thumb-empty"></div></sc-if>
                           </div>
                           <div style="display:flex;flex-direction:column;gap:6px;">
                             <label class="btn" style="cursor:pointer;">Escolher foto<input type="file" accept="image/*" onChange="{{ im.upload }}" style="display:none;"></label>
+                            <sc-if value="{{ im.has }}"><button onClick="{{ im.adjust }}" class="btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>Ajustar enquadramento</button></sc-if>
                             <sc-if value="{{ im.has }}"><button onClick="{{ im.clear }}" class="btn btn-danger">Remover</button></sc-if>
                           </div>
                         </div>
@@ -366,12 +367,13 @@
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
               <span class="label">FOTOS</span>
-              <span style="font-size:12px;color:var(--muted);">A primeira é a capa. Toque numa foto para torná-la capa.</span>
+              <span style="font-size:12px;color:var(--muted);">A primeira é a capa. Toque numa foto para torná-la capa · o botão no canto ajusta zoom e posição.</span>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <sc-for list="{{ draftImgs }}" as="im">
                 <div class="photo" style="outline:2px solid {{ im.outline }};outline-offset:2px;">
-                  <img src="{{ im.src }}" alt="" onClick="{{ im.cover }}">
+                  <img src="{{ im.src }}" alt="" onClick="{{ im.cover }}" style="{{ im.style }}">
+                  <button onClick="{{ im.adjust }}" aria-label="Ajustar enquadramento" title="Ajustar enquadramento" class="adj-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></button>
                   <sc-if value="{{ im.isCover }}"><span class="cover">Capa</span></sc-if>
                   <button onClick="{{ im.remove }}" aria-label="Remover foto" class="rm">×</button>
                 </div>
@@ -409,6 +411,52 @@
     </div>
   </sc-if>
 
+  <!-- ===================== AJUSTAR FOTO ===================== -->
+  <sc-if value="{{ hasAdj }}">
+    <div class="overlay" style="z-index:60;" onClick="{{ adjCancel }}">
+      <div class="modal" style="max-width:640px;height:auto;" onClick="{{ stop }}">
+        <div class="modal-head">
+          <div style="display:flex;flex-direction:column;">
+            <span style="font-family:var(--font-heading);font-size:24px;line-height:1.1;">Ajustar foto</span>
+            <span style="font-size:12px;color:var(--muted);">Arraste a foto para escolher o que aparece · use o controle para ampliar ou reduzir</span>
+          </div>
+          <button onClick="{{ adjCancel }}" aria-label="Fechar" class="btn btn-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div class="modal-body" style="gap:20px;">
+          <div class="adj-wrap">
+            <div class="adj-main">
+              <div class="adj-frame" style="aspect-ratio:{{ adjAspect }};" onPointerDown="{{ adjDown }}" onPointerMove="{{ adjMove }}" onPointerUp="{{ adjUp }}" onPointerCancel="{{ adjUp }}" onWheel="{{ adjWheel }}">
+                <img src="{{ adjSrc }}" alt="" draggable="false" style="{{ adjStyle }}">
+                <div class="adj-grid"></div>
+              </div>
+              <span class="adj-cap">{{ adjCap }}</span>
+            </div>
+            <sc-if value="{{ adjHas2 }}">
+              <div class="adj-side">
+                <div class="adj-frame" style="aspect-ratio:4/5;cursor:default;"><img src="{{ adjSrc }}" alt="" style="{{ adjStyle }}"></div>
+                <span class="adj-cap">Na página da peça</span>
+              </div>
+            </sc-if>
+          </div>
+          <div class="adj-zoom">
+            <button onClick="{{ adjMinus }}" class="btn btn-icon" aria-label="Reduzir"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+            <input type="range" min="60" max="300" step="1" value="{{ adjZoom }}" onChange="{{ adjOnZoom }}" aria-label="Zoom">
+            <button onClick="{{ adjPlus }}" class="btn btn-icon" aria-label="Ampliar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></button>
+            <b>{{ adjZoomLabel }}</b>
+          </div>
+          <span style="font-size:12px;color:var(--muted);text-align:center;">{{ adjNote }}</span>
+        </div>
+        <div class="modal-foot">
+          <button onClick="{{ adjReset }}" class="btn btn-ghost">Restaurar original</button>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button onClick="{{ adjCancel }}" class="btn" style="min-height:46px;">Cancelar</button>
+            <button onClick="{{ adjApply }}" class="btn btn-primary" style="min-height:46px;padding:10px 24px;font-size:14px;">Aplicar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ hasFlash }}"><div class="toast">{{ flash }}</div></sc-if>
 </div>
 </script>
@@ -440,7 +488,7 @@ const pct = (a, b) => b ? (a / b * 100).toLocaleString('pt-BR', { maximumFractio
 const ago = t => { if (!t) return ''; const d = Math.floor((Date.now() - t) / DAY); return d <= 0 ? 'no ar desde hoje' : d === 1 ? 'no ar há 1 dia' : 'no ar há ' + d + ' dias'; };
 
 class Component extends DCLogic {
-  state = { data: null, authed: sessionStorage.getItem('isa-admin-ok') === '1' || !!sessionStorage.getItem('isa-admin-token'), token: sessionStorage.getItem('isa-admin-token') || '', email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1 };
+  state = { data: null, authed: sessionStorage.getItem('isa-admin-ok') === '1' || !!sessionStorage.getItem('isa-admin-token'), token: sessionStorage.getItem('isa-admin-token') || '', email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
   async componentDidMount() {
     this.m = await import(new URL('data.js', document.baseURI).href);
     if (this.m.remote && !this.state.token) { sessionStorage.removeItem('isa-admin-ok'); this.setState({ authed: false }); }
@@ -451,11 +499,11 @@ class Component extends DCLogic {
     if (this.state.authed) { this.m.markAdmin(); this.loadStats(this.state.period); }
     this.onResize = () => this.setState({ w: window.innerWidth });
     window.addEventListener('resize', this.onResize);
-    this.onKey = e => { if (e.key === 'Escape' && this.state.draft) this.setState({ draft: null }); };
+    this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft) this.setState({ draft: null }); };
     window.addEventListener('keydown', this.onKey);
   }
   componentWillUnmount() { window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); }
-  componentDidUpdate() { document.body.style.overflow = this.state.draft ? 'hidden' : ''; }
+  componentDidUpdate() { document.body.style.overflow = (this.state.draft || this.state.adj) ? 'hidden' : ''; }
   toast(t) { this.setState({ flash: t }); clearTimeout(this.ft); this.ft = setTimeout(() => this.setState({ flash: '' }), 2800); }
   async loadStats(period) {
     if (!this.m || !this.m.remote || !this.state.token) return;
@@ -497,6 +545,7 @@ class Component extends DCLogic {
     const statuses = m ? m.statuses : [];
     const sOf = v => statuses.find(x => x.v === v) || {};
     const cover = p => (p.images || [])[0] || '';
+    const ist = (p, src) => m ? m.imgStyle(p && p.imgAdj && p.imgAdj[src]) : '';
     const fp = p => m ? m.finalPrice(p) : Number(p.price || 0);
     const dcOf = p => m ? m.discountOf(p) : 0;
     const saleValue = p => Number(p.soldPrice ?? fp(p)) || 0;
@@ -563,14 +612,14 @@ class Component extends DCLogic {
 
     const top = statsOk ? products.map(p => ({ p, s: ps(p.id) })).filter(x => Number(x.s.cliques) > 0)
       .sort((a, b) => b.s.cliques - a.s.cliques).slice(0, 8)
-      .map((x, i) => ({ rank: i + 1, name: x.p.name, price: brl(fp(x.p)), cover: cover(x.p), noCover: !cover(x.p), cliques: num(x.s.cliques), sacola: num(x.s.sacola), pedidos: num(x.s.pedidos), status: sOf(x.p.status).l, dot: sOf(x.p.status).c })) : [];
+      .map((x, i) => ({ rank: i + 1, name: x.p.name, price: brl(fp(x.p)), style: ist(x.p, cover(x.p)), cover: cover(x.p), noCover: !cover(x.p), cliques: num(x.s.cliques), sacola: num(x.s.sacola), pedidos: num(x.s.pedidos), status: sOf(x.p.status).l, dot: sOf(x.p.status).c })) : [];
 
     const edit = p => this.setState({ draft: { ...p, images: [...(p.images || [])], price: String(p.price ?? ''), discount: p.discount ? String(p.discount) : '', soldPrice: p.soldPrice == null ? '' : String(p.soldPrice) }, formErr: '' });
     const attn = avail.filter(p => p.createdAt && Date.now() - p.createdAt > 30 * DAY && (!statsOk || Number(ps(p.id).cliques) < 3))
       .sort((a, b) => a.createdAt - b.createdAt).slice(0, 5)
-      .map(p => ({ name: p.name, cover: cover(p), noCover: !cover(p), meta: ago(p.createdAt) + (statsOk ? ' · ' + num(ps(p.id).cliques) + ' cliques no período' : '') + ' · ' + brl(fp(p)), edit: () => edit(p) }));
+      .map(p => ({ name: p.name, style: ist(p, cover(p)), cover: cover(p), noCover: !cover(p), meta: ago(p.createdAt) + (statsOk ? ' · ' + num(ps(p.id).cliques) + ' cliques no período' : '') + ' · ' + brl(fp(p)), edit: () => edit(p) }));
     const recent = [...sold].sort((a, b) => (b.soldAt || 0) - (a.soldAt || 0)).slice(0, 5)
-      .map(p => ({ name: p.name, cover: cover(p), noCover: !cover(p), value: brl(saleValue(p)), date: p.soldAt ? 'vendida em ' + new Date(p.soldAt).toLocaleDateString('pt-BR') : 'data da venda não registrada' }));
+      .map(p => ({ name: p.name, style: ist(p, cover(p)), cover: cover(p), noCover: !cover(p), value: brl(saleValue(p)), date: p.soldAt ? 'vendida em ' + new Date(p.soldAt).toLocaleDateString('pt-BR') : 'data da venda não registrada' }));
 
     let statsNotice = '';
     if (m && !m.remote) statsNotice = 'Visitas e cliques aparecem quando a loja estiver conectada ao Supabase.';
@@ -588,7 +637,7 @@ class Component extends DCLogic {
     const shown = products.filter(p => (st.fStatus === 'todos' || p.status === st.fStatus) && (!q || [p.name, p.brand, p.code].join(' ').toLowerCase().includes(q)));
     const rows = shown.map(p => ({
       name: p.name, meta: [p.brand, p.category, 'Tam. ' + p.size, p.code].filter(Boolean).join(' · '), price: dcOf(p) ? brl(fp(p)) + '  (−' + String(dcOf(p)).replace('.', ',') + '% · de ' + brl(p.price) + ')' : brl(p.price),
-      cover: cover(p), hasCover: !!cover(p), noCover: !cover(p),
+      cover: cover(p), style: ist(p, cover(p)), hasCover: !!cover(p), noCover: !cover(p),
       status: p.status, dot: sOf(p.status).c,
       hasStats: statsOk, cliques: num(ps(p.id).cliques), sacola: num(ps(p.id).sacola),
       age: p.status === 'vendido' && p.soldAt ? 'vendida em ' + new Date(p.soldAt).toLocaleDateString('pt-BR') : ago(p.createdAt),
@@ -625,7 +674,7 @@ class Component extends DCLogic {
     ] : [];
     const imgs = dr ? dr.images : [];
     const draftImgs = imgs.map((src, i) => ({
-      src, isCover: i === 0, outline: i === 0 ? 'var(--accent)' : 'transparent',
+      src, style: ist(dr, src), adjust: () => this.setState({ adj: { kind: 'draft', src, aspect: '2/3', ...((dr.imgAdj || {})[src] || { z: 1, x: 50, y: 50 }) } }), isCover: i === 0, outline: i === 0 ? 'var(--accent)' : 'transparent',
       cover: () => setD('images', [src, ...imgs.filter((_, j) => j !== i)]),
       remove: () => setD('images', imgs.filter((_, j) => j !== i))
     }));
@@ -637,15 +686,19 @@ class Component extends DCLogic {
       if (!isFinite(disc) || disc < 0 || disc >= 100) return this.setState({ formErr: 'O desconto precisa ser entre 0 e 99%.' });
       const sp = parseFloat(String(dr.soldPrice ?? '').replace(',', '.'));
       let p = { ...dr, name: dr.name.trim(), price, discount: disc || null, soldPrice: isFinite(sp) ? sp : null };
+      if (p.imgAdj) { const keep = {}; (p.images || []).forEach(u => { if (p.imgAdj[u]) keep[u] = p.imgAdj[u]; }); p.imgAdj = keep; }
       p = withSale(p, p.status);
       const exists = products.some(x => x.id === p.id);
       this.commit({ ...d, products: exists ? products.map(x => x.id === p.id ? p : x) : [p, ...products] }, exists ? 'Peça atualizada.' : 'Peça publicada na loja!').then(ok => ok && this.setState({ draft: null }));
     };
     const sd = st.sd || {};
     const setS = (k, v) => this.setState(x => ({ sd: { ...x.sd, [k]: v } }));
+    const adjKey = key => key === 'heroImage' ? 'heroAdj' : 'aboutAdj';
     const img = (key, label) => ({
-      label, src: sd[key] || '', has: !!sd[key], none: !sd[key], clear: () => setS(key, ''),
-      upload: async e => { const r = await this.readImgs(e.target.files); if (r[0]) setS(key, r[0]); e.target.value = ''; }
+      label, src: sd[key] || '', has: !!sd[key], none: !sd[key], style: m ? m.imgStyle(sd[adjKey(key)]) : '',
+      clear: () => { setS(key, ''); setS(adjKey(key), null); },
+      adjust: () => this.setState({ adj: { kind: 'set', key, src: sd[key], aspect: '4/5', ...(sd[adjKey(key)] || { z: 1, x: 50, y: 50 }) } }),
+      upload: async e => { const r = await this.readImgs(e.target.files); if (r[0]) { setS(key, r[0]); setS(adjKey(key), null); } e.target.value = ''; }
     });
     const lst = (key, label, ph) => {
       const items = sd[key] || [];
@@ -665,7 +718,34 @@ class Component extends DCLogic {
       { title: 'Segurança', desc: 'Senha para entrar neste painel.', fields: [field(sd, setS, 'password', 'Senha do painel', 'text')], images: [], lists: [] }
     ].filter(g => !(m && m.remote && g.title === 'Segurança'));
 
+    const A = st.adj;
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const setA = o => this.setState(x => ({ adj: { ...x.adj, ...o } }));
+    const zoomTo = z => setA({ z: clamp(Math.round(z * 100) / 100, 0.6, 3) });
+    const adjVals = A ? {
+      hasAdj: true, adjSrc: A.kind === 'set' ? A.src : A.src, adjAspect: A.aspect, adjHas2: A.kind === 'draft',
+      adjCap: A.kind === 'draft' ? 'Na vitrine da loja' : (A.key === 'heroImage' ? 'Capa da loja' : 'Retrato em "A Isa"'),
+      adjStyle: m ? m.imgStyle(A) : '', adjZoom: Math.round(A.z * 100), adjZoomLabel: Math.round(A.z * 100) + '%',
+      adjNote: A.kind === 'draft' ? 'Depois de aplicar, clique em "Salvar peça" para publicar.' : 'Depois de aplicar, clique em "Salvar alterações" para publicar.',
+      adjOnZoom: e => zoomTo(Number(e.target.value) / 100),
+      adjMinus: () => zoomTo(A.z - 0.1), adjPlus: () => zoomTo(A.z + 0.1),
+      adjWheel: e => { e.preventDefault(); zoomTo(A.z - Math.sign(e.deltaY) * 0.05); },
+      adjDown: e => { const r = e.currentTarget.getBoundingClientRect(); this.drag = { px: e.clientX, py: e.clientY, x: A.x, y: A.y, w: r.width, h: r.height }; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} },
+      adjMove: e => { const g = this.drag; if (!g) return; const k = 1.2 / Math.max(this.state.adj.z, 1); setA({ x: clamp(g.x - (e.clientX - g.px) / g.w * 100 * k, 0, 100), y: clamp(g.y - (e.clientY - g.py) / g.h * 100 * k, 0, 100) }); },
+      adjUp: () => { this.drag = null; },
+      adjReset: () => setA({ z: 1, x: 50, y: 50 }),
+      adjCancel: () => this.setState({ adj: null }),
+      adjApply: () => {
+        const v = { z: A.z, x: Math.round(A.x * 10) / 10, y: Math.round(A.y * 10) / 10 };
+        const isDefault = v.z === 1 && v.x === 50 && v.y === 50;
+        if (A.kind === 'set') setS(adjKey(A.key), isDefault ? null : v);
+        else this.setState(x => { const ia = { ...(x.draft.imgAdj || {}) }; if (isDefault) delete ia[A.src]; else ia[A.src] = v; return { draft: { ...x.draft, imgAdj: ia } }; });
+        this.setState({ adj: null });
+      }
+    } : { hasAdj: false };
+
     return {
+      ...adjVals,
       loading: !d, storeName: s.storeName || 'Desapega da Isa',
       needLogin: !!d && !st.authed, authed: !!d && st.authed,
       pw: st.pw, pwErr: st.pwErr, onPw: e => this.setState({ pw: e.target.value, pwErr: '' }),

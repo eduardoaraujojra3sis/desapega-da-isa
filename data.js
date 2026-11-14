@@ -186,3 +186,13 @@ export function sitePhoto(url) {
   if (!url || !url.startsWith(base)) return /^https?:/.test(url || '') ? url : '';
   return location.origin + '/foto/' + url.slice(base.length);
 }
+
+// ---------- Enquadramento das fotos (zoom e posição escolhidos no painel) ----------
+// adj = { z: zoom (0.6 a 3), x: 0-100 (%), y: 0-100 (%) }
+export function imgStyle(adj) {
+  if (!adj) return '';
+  const z = Math.min(3, Math.max(0.6, Number(adj.z) || 1));
+  const x = Math.min(100, Math.max(0, Number(adj.x ?? 50)));
+  const y = Math.min(100, Math.max(0, Number(adj.y ?? 50)));
+  return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;`;
+}

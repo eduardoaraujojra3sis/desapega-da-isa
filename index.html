@@ -81,7 +81,7 @@ button,select,input{font-family:inherit}
     <div style="position:relative;max-width:520px;width:100%;justify-self:center;padding:14px;border:1px solid #CDB79A;border-radius:999px 999px 10px 10px;">
       <div style="position:relative;aspect-ratio:4/5;border-radius:999px 999px 4px 4px;overflow:hidden;outline:1px dashed #B8875A;outline-offset:-10px;background:#EADCC8;">
         <sc-if value="{{ heroHasImg }}">
-          <img src="{{ s.heroImage }}" alt="Isa" style="width:100%;height:100%;object-fit:cover;display:block;">
+          <img src="{{ s.heroImage }}" alt="Isa" style="width:100%;height:100%;object-fit:cover;display:block;{{ heroStyle }}">
         </sc-if>
         <sc-if value="{{ heroNoImg }}">
           <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 12px,#E3D1B9 12px 24px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#6B5646;">foto da Isa · envie pelo painel</div>
@@ -152,7 +152,7 @@ button,select,input{font-family:inherit}
           <article onClick="{{ c.open }}" style="cursor:pointer;display:flex;flex-direction:column;gap:14px;opacity:{{ c.opacity }};transition:transform .3s ease;" style-hover="transform:translateY(-3px)">
             <div style="position:relative;aspect-ratio:2/3;overflow:hidden;background:#EADCC8;border-radius:4px;">
               <sc-if value="{{ c.hasCover }}">
-                <img loading="lazy" decoding="async" src="{{ c.cover }}" alt="{{ c.name }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <img loading="lazy" decoding="async" src="{{ c.cover }}" alt="{{ c.name }}" style="width:100%;height:100%;object-fit:cover;display:block;{{ c.imgStyle }}">
               </sc-if>
               <sc-if value="{{ c.noCover }}">
                 <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 12px,#E3D1B9 12px 24px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#6B5646;">foto da peça</div>
@@ -220,7 +220,7 @@ button,select,input{font-family:inherit}
       <div style="max-width:420px;width:100%;justify-self:center;padding:12px;border:1px solid #CDB79A;border-radius:999px 999px 10px 10px;">
         <div style="position:relative;aspect-ratio:4/5;border-radius:999px 999px 4px 4px;overflow:hidden;background:#EADCC8;">
           <sc-if value="{{ aboutHasImg }}">
-            <img src="{{ s.aboutImage }}" alt="Isa" style="width:100%;height:100%;object-fit:cover;display:block;">
+            <img src="{{ s.aboutImage }}" alt="Isa" style="width:100%;height:100%;object-fit:cover;display:block;{{ aboutStyle }}">
           </sc-if>
           <sc-if value="{{ aboutNoImg }}">
             <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 12px,#E3D1B9 12px 24px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#6B5646;">retrato da Isa</div>
@@ -259,7 +259,7 @@ button,select,input{font-family:inherit}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));">
           <div style="padding:clamp(12px,2vw,24px);display:flex;flex-direction:column;gap:10px;">
             <div style="position:relative;aspect-ratio:4/5;background:#EADCC8;border-radius:8px;overflow:hidden;">
-              <sc-if value="{{ hasMain }}"><img src="{{ mainImg }}" alt="{{ p.name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></sc-if>
+              <sc-if value="{{ hasMain }}"><img src="{{ mainImg }}" alt="{{ p.name }}" style="width:100%;height:100%;object-fit:cover;display:block;{{ mainStyle }}"></sc-if>
               <sc-if value="{{ noMain }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 12px,#E3D1B9 12px 24px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#6B5646;">fotos da peça</div></sc-if>
               <sc-if value="{{ hasThumbs }}">
                 <button onClick="{{ prevImg }}" aria-label="Anterior" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(245,237,225,.92);border:0;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#2B1D14;">
@@ -275,7 +275,7 @@ button,select,input{font-family:inherit}
               <div style="display:flex;gap:8px;overflow-x:auto;">
                 <sc-for list="{{ thumbs }}" as="t">
                   <button onClick="{{ t.pick }}" style="flex:none;width:64px;height:80px;padding:0;border:2px solid {{ t.border }};border-radius:6px;overflow:hidden;background:#EADCC8;cursor:pointer;opacity:{{ t.opacity }};">
-                    <img src="{{ t.src }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
+                    <img src="{{ t.src }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;{{ t.style }}">
                   </button>
                 </sc-for>
               </div>
@@ -337,7 +337,7 @@ button,select,input{font-family:inherit}
           <sc-for list="{{ cartItems }}" as="it">
             <div style="display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:14px;padding:20px 0;border-bottom:1px dashed #CDB79A;align-items:start;">
               <div style="width:76px;height:96px;background:#EADCC8;border-radius:6px;position:relative;overflow:hidden;">
-                <sc-if value="{{ it.hasCover }}"><img src="{{ it.cover }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></sc-if>
+                <sc-if value="{{ it.hasCover }}"><img src="{{ it.cover }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;{{ it.style }}"></sc-if>
                 <sc-if value="{{ it.noCover }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 8px,#E3D1B9 8px 16px);"></div></sc-if>
               </div>
               <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
@@ -439,6 +439,7 @@ class Component extends DCLogic {
     const statusInfo = p => p.status === 'vendido' ? ['Vendida', '#2B1D14'] : p.status === 'reservado' ? ['Reservada', '#8B4A2B'] : null;
     const cover = p => (p.images && p.images[0]) || '';
     const fp = p => m ? m.finalPrice(p) : Number(p.price || 0);
+    const adj = (p, src) => m ? m.imgStyle(p && p.imgAdj && p.imgAdj[src]) : '';
     const dc = p => m ? m.discountOf(p) : 0;
     const offLabel = p => '-' + String(dc(p)).replace('.', ',') + '%';
     const cats = ['Todas', ...(s.categories || [])].map(c => {
@@ -452,7 +453,7 @@ class Component extends DCLogic {
       const si = statusInfo(p);
       return {
         name: p.name, brand: p.brand, meta: ['Tam. ' + p.size, p.condition].filter(Boolean).join(' · '),
-        price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, off: offLabel(p), priceColor: dc(p) ? '#8B4A2B' : '#2B1D14', cover: cover(p), hasCover: !!cover(p), noCover: !cover(p),
+        price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, off: offLabel(p), priceColor: dc(p) ? '#8B4A2B' : '#2B1D14', imgStyle: adj(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p),
         hasBadge: !!si, badge: si ? si[0] : '', badgeColor: si ? si[1] : '', opacity: p.status === 'vendido' ? 0.55 : 1,
         open: () => { this.setState({ openId: p.id, img: 0 }); m && m.track([{ tipo: 'clique', produto: p.id }]); }
       };
@@ -482,7 +483,7 @@ class Component extends DCLogic {
       s, navDisplay: st.w < 1000 ? 'none' : 'flex', hasAvail: avail > 0, bagLabelDisplay: mobile ? 'none' : 'inline',
       cartCount: st.cart.length, hasCount: st.cart.length > 0,
       openCart: () => this.setState({ cartOpen: true }), closeCart: () => this.setState({ cartOpen: false }),
-      heroHasImg: !!s.heroImage, heroNoImg: !s.heroImage,
+      heroStyle: m ? m.imgStyle(s.heroAdj) : '', aboutStyle: m ? m.imgStyle(s.aboutAdj) : '', heroHasImg: !!s.heroImage, heroNoImg: !s.heroImage,
       heroBadge: avail === 1 ? '1 peça' : avail + ' peças',
       aboutHasImg: !!s.aboutImage, aboutNoImg: !s.aboutImage,
       cats, sizeOpts: ['Todos', ...(s.sizes || [])], size: st.size, sort: st.sort,
@@ -499,16 +500,16 @@ class Component extends DCLogic {
       hasOpen: !!op, closeProduct: () => this.setState({ openId: null }), stop: e => e.stopPropagation(),
       modalPad: mobile ? '0' : '32px', modalH: mobile ? '100%' : 'auto', modalRadius: mobile ? '0' : 'var(--radius-lg)', closePos: mobile ? 'fixed' : 'absolute',
       p: op ? { name: op.name, brand: op.brand, priceStr: brl(fp(op)), oldPrice: brl(op.price), hasOff: dc(op) > 0, off: offLabel(op), priceColor: dc(op) ? '#8B4A2B' : '#2B1D14', description: op.description, hasStatus: !!osi, statusLabel: osi ? osi[0] : '', statusColor: osi ? osi[1] : '' } : {},
-      mainImg: imgs[idx] || '', hasMain: !!imgs[idx], noMain: !imgs[idx],
+      mainImg: imgs[idx] || '', mainStyle: adj(op, imgs[idx]), hasMain: !!imgs[idx], noMain: !imgs[idx],
       hasThumbs: imgs.length > 1, imgCounter: (idx + 1) + ' / ' + imgs.length,
-      thumbs: imgs.map((src, i) => ({ src, border: i === idx ? '#8B4A2B' : 'transparent', opacity: i === idx ? 1 : 0.7, pick: () => this.setState({ img: i }) })),
+      thumbs: imgs.map((src, i) => ({ src, style: adj(op, src), border: i === idx ? '#8B4A2B' : 'transparent', opacity: i === idx ? 1 : 0.7, pick: () => this.setState({ img: i }) })),
       prevImg: e => { e.stopPropagation(); this.setState({ img: (idx - 1 + imgs.length) % imgs.length }); },
       nextImg: e => { e.stopPropagation(); this.setState({ img: (idx + 1) % imgs.length }); },
       details: op ? [['Marca', op.brand], ['Tamanho', op.size], ['Estado', op.condition], ['Medidas', op.measures], ['Código', op.code]].filter(r => r[1]).map(r => ({ k: r[0], v: r[1] })) : [],
       btnLabel, btnAction, btnDisabled, btnBg: btnDisabled ? '#A8927A' : '#8B4A2B', btnCursor: btnDisabled ? 'not-allowed' : 'pointer', chipJustify: mobile ? 'flex-start' : 'center',
       cartOpen: st.cartOpen, cartEmpty: items.length === 0, cartHas: items.length > 0,
       cartCountLabel: items.length === 1 ? '1 peça' : items.length + ' peças',
-      cartItems: items.map(p => ({ name: p.name, brand: p.brand, meta: 'Tam. ' + p.size + ' · ' + p.code, price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, cover: cover(p), hasCover: !!cover(p), noCover: !cover(p), remove: () => this.setCart(st.cart.filter(x => x !== p.id)) })),
+      cartItems: items.map(p => ({ name: p.name, brand: p.brand, meta: 'Tam. ' + p.size + ' · ' + p.code, price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, style: adj(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p), remove: () => this.setCart(st.cart.filter(x => x !== p.id)) })),
       totalStr: brl(total), name: st.name, onName: e => this.setState({ name: e.target.value }), checkout,
       toast: st.toast, hasToast: !!st.toast,
       igUrl: 'https://instagram.com/' + ig, waUrl: m ? m.waLink(s.whatsapp, 'Oi, Isa! Vim pelo Desapega.') : '#'

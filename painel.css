@@ -260,3 +260,21 @@ select.input { appearance: none; -webkit-appearance: none; padding-right: 36px; 
   .cell-prod b { max-width: 150px; }
   .hide-sm { display: none; }
 }
+
+/* ---------- ajuste de foto ---------- */
+.thumb img, .photo img, .photo-box img { transform-origin: 50% 50%; }
+.adj-wrap { display: flex; gap: 20px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.adj-main { width: min(300px, 100%); display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.adj-side { width: 150px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.adj-frame { position: relative; width: 100%; overflow: hidden; border-radius: 12px; background: var(--accent-soft); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 0 0 1px var(--line-2); }
+.adj-frame:active { cursor: grabbing; }
+.adj-frame img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.adj-grid { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(to right, transparent calc(33.33% - .5px), rgba(251,246,238,.55) calc(33.33% - .5px), rgba(251,246,238,.55) calc(33.33% + .5px), transparent calc(33.33% + .5px), transparent calc(66.66% - .5px), rgba(251,246,238,.55) calc(66.66% - .5px), rgba(251,246,238,.55) calc(66.66% + .5px), transparent calc(66.66% + .5px)),
+  linear-gradient(to bottom, transparent calc(33.33% - .5px), rgba(251,246,238,.55) calc(33.33% - .5px), rgba(251,246,238,.55) calc(33.33% + .5px), transparent calc(33.33% + .5px), transparent calc(66.66% - .5px), rgba(251,246,238,.55) calc(66.66% - .5px), rgba(251,246,238,.55) calc(66.66% + .5px), transparent calc(66.66% + .5px)); }
+.adj-cap { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.adj-zoom { display: flex; align-items: center; gap: 12px; max-width: 420px; width: 100%; margin: 0 auto; }
+.adj-zoom input[type=range] { flex: 1; accent-color: var(--accent); height: 28px; }
+.adj-zoom b { width: 48px; text-align: right; font-feature-settings: 'tnum'; font-size: 14px; }
+.photo .adj-btn { position: absolute; top: 6px; left: 6px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(251,246,238,.95); cursor: pointer; color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 0; }
+.photo .adj-btn:hover, .photo .rm:hover { background: #fff; }
