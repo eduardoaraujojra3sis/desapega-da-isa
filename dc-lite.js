@@ -74,12 +74,13 @@ function toVNodes(nodes, scopes) {
         if (typeof v === 'function') props[ev] = v;
         continue;
       }
+      if (name === 'innerhtml') { props.dangerouslySetInnerHTML = { __html: str(v) }; continue; }
       if (v === false || v == null) { if (name === 'value') props.value = ''; continue; }
       props[name === 'class' ? 'class' : name] = v === true ? (name === 'value' ? 'true' : true) : v;
     }
     if (hover) props.class = (props.class ? props.class + ' ' : '') + hoverClass(hover);
     const kids = n.tagName === 'TEMPLATE' ? n.content.childNodes : n.childNodes;
-    out.push(h(tag, props, ...toVNodes(kids, scopes)));
+    out.push(props.dangerouslySetInnerHTML ? h(tag, props) : h(tag, props, ...toVNodes(kids, scopes)));
   }
   return out;
 }

@@ -383,6 +383,7 @@ class Component extends DCLogic {
       else apply(this.m.load());
     };
     this.reload();
+    try { if (!sessionStorage.getItem('isa-visit')) { sessionStorage.setItem('isa-visit', '1'); this.m.track([{ tipo: 'visita' }]); } } catch (e) {}
     const fontsReady = document.fonts ? document.fonts.ready.catch(() => {}) : Promise.resolve();
     const dataReady = new Promise(res => { const t = setInterval(() => { if (this.state.data) { clearInterval(t); res(); } }, 30); });
     const imgReady = dataReady.then(() => new Promise(res => { const src = this.state.data.settings.heroImage; if (!src) return res(); const i = new Image(); i.onload = i.onerror = res; i.src = src; }));
@@ -437,7 +438,7 @@ class Component extends DCLogic {
         name: p.name, brand: p.brand, meta: ['Tam. ' + p.size, p.condition].filter(Boolean).join(' · '),
         price: brl(p.price), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p),
         hasBadge: !!si, badge: si ? si[0] : '', badgeColor: si ? si[1] : '', opacity: p.status === 'vendido' ? 0.55 : 1,
-        open: () => this.setState({ openId: p.id, img: 0 })
+        open: () => { this.setState({ openId: p.id, img: 0 }); m && m.track([{ tipo: 'clique', produto: p.id }]); }
       };
     });
     const avail = pub.filter(p => p.status === 'disponivel').length;
@@ -445,7 +446,7 @@ class Component extends DCLogic {
     const imgs = op ? (op.images || []) : [];
     const idx = imgs.length ? Math.min(st.img, imgs.length - 1) : 0;
     const inCart = op && st.cart.includes(op.id);
-    let btnLabel = 'Quero essa!', btnAction = () => { this.setCart([...st.cart, op.id]); this.setState({ openId: null }); this.flash('Foi pra sacola!'); }, btnDisabled = false;
+    let btnLabel = 'Quero essa!', btnAction = () => { m.track([{ tipo: 'sacola', produto: op.id }]); this.setCart([...st.cart, op.id]); this.setState({ openId: null }); this.flash('Foi pra sacola!'); }, btnDisabled = false;
     if (op && op.status === 'vendido') { btnLabel = 'Já foi vendida'; btnDisabled = true; }
     else if (op && op.status === 'reservado') { btnLabel = 'Reservada no momento'; btnDisabled = true; }
     else if (inCart) { btnLabel = 'Já tá na sacola — ver sacola'; btnAction = () => this.setState({ openId: null, cartOpen: true }); }
@@ -456,6 +457,7 @@ class Component extends DCLogic {
     const checkout = () => {
       const lines = items.map((p, i) => `${i + 1}. ${p.name}${p.brand ? ' (' + p.brand + ')' : ''} · Tam. ${p.size} · ${brl(p.price)} · cód. ${p.code}`);
       const txt = `${s.messageIntro}\n\n${lines.join('\n')}\n\nTotal: ${brl(total)}${st.name.trim() ? '\n\nMeu nome: ' + st.name.trim() : ''}`;
+      m.track([{ tipo: 'pedido' }, ...items.map(p => ({ tipo: 'pedido_item', produto: p.id }))]);
       window.open(m.waLink(s.whatsapp, txt), '_blank');
     };
     return {

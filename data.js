@@ -148,3 +148,26 @@ export async function uploadImage(dataURL, token) {
 export function waLink(number, text) {
   return 'https://wa.me/' + String(number || '').replace(/\D/g, '') + '?text=' + encodeURIComponent(text);
 }
+
+// ---------- Estatísticas (tabela "eventos" e função "painel_resumo" no Supabase — ver LEIA-ME) ----------
+const ADMIN_FLAG = 'desapega-isa-admin';
+export function markAdmin() { try { localStorage.setItem(ADMIN_FLAG, '1'); } catch (e) {} }
+const isAdminBrowser = () => { try { return localStorage.getItem(ADMIN_FLAG) === '1'; } catch (e) { return false; } };
+
+// events: [{ tipo: 'visita' | 'clique' | 'sacola' | 'pedido' | 'pedido_item', produto?: id }]
+export function track(events) {
+  if (!remote || isAdminBrowser() || !events || !events.length) return;
+  const rows = events.map(e => ({ tipo: e.tipo, produto: e.produto || null }));
+  try {
+    fetch(SUPABASE_URL + '/rest/v1/eventos', { method: 'POST', keepalive: true, headers: { ...H(), Prefer: 'return=minimal' }, body: JSON.stringify(rows) }).catch(() => {});
+  } catch (e) {}
+}
+
+export async function fetchStats(days, token) {
+  const desde = new Date(Date.now() - days * 86400000).toISOString();
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/painel_resumo', { method: 'POST', headers: H(token), body: JSON.stringify({ desde }) });
+  if (r.status === 401) throw new Error('sessao');
+  if (!r.ok) throw new Error('stats');
+  const d = await r.json();
+  return { por_dia: (d && d.por_dia) || [], por_peca: (d && d.por_peca) || [] };
+}
