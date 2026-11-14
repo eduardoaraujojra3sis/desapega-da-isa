@@ -353,7 +353,10 @@
   <!-- ===================== MODAL PEÇA ===================== -->
   <sc-if value="{{ hasDraft }}">
     <div class="overlay" onClick="{{ closeDraft }}">
-      <div class="modal" onClick="{{ stop }}">
+      <div class="modal" style="position:relative;" onClick="{{ stop }}" onDragEnter="{{ fileEnter }}" onDragOver="{{ fileOver }}" onDragLeave="{{ fileLeave }}" onDrop="{{ fileDrop }}">
+          <sc-if value="{{ fileHover }}">
+            <div class="drop-overlay"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg><b>Solte aqui para adicionar</b><span>Fotos vão para Fotos · vídeos vão para Vídeos</span></div>
+          </sc-if>
         <div class="modal-head">
           <div style="display:flex;flex-direction:column;">
             <span style="font-family:var(--font-heading);font-size:26px;line-height:1.1;">{{ draftTitle }}</span>
@@ -367,7 +370,7 @@
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
               <span class="label">FOTOS</span>
-              <span style="font-size:12px;color:var(--muted);">A primeira é a capa. Arraste as fotos ou use as setas para mudar a ordem · toque numa foto para torná-la capa.</span>
+              <span style="font-size:12px;color:var(--muted);">Arraste fotos do computador para cá ou cole com Ctrl+V · use as setas ou arraste para mudar a ordem · a 1ª é a capa.</span>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <sc-for list="{{ draftImgs }}" as="im">
@@ -537,10 +540,21 @@ class Component extends DCLogic {
     window.addEventListener('resize', this.onResize);
     this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft && !this.state.uploading && this.state.vidPct < 0) this.setState({ draft: null }); };
     window.addEventListener('keydown', this.onKey);
+    this.onPaste = e => {
+      if (!this.state.draft || this.state.adj) return;
+      const files = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(f => this.isMediaFile(f));
+      if (!files.length) return; // texto normal: deixa colar no campo
+      e.preventDefault();
+      this.addMediaFiles(files);
+    };
+    window.addEventListener('paste', this.onPaste);
+    this.onWinDrop = e => { if (this.state.draft && e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); };
+    window.addEventListener('dragover', this.onWinDrop);
+    window.addEventListener('drop', this.onWinDrop);
     this.onStorage = e => { if (e.key === 'isa-admin-session' && this.m.remote) { const on = !!this.m.getSession(); if (on !== this.state.authed) this.setState({ authed: on }); } };
     window.addEventListener('storage', this.onStorage);
   }
-  componentWillUnmount() { window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); }
+  componentWillUnmount() { window.removeEventListener('paste', this.onPaste); window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); }
   componentDidUpdate() { document.body.style.overflow = (this.state.draft || this.state.adj) ? 'hidden' : ''; }
   toast(t) { this.setState({ flash: t }); clearTimeout(this.ft); this.ft = setTimeout(() => this.setState({ flash: '' }), 2800); }
   async loadStats(period) {
@@ -571,6 +585,24 @@ class Component extends DCLogic {
     if (this.m.save(data)) { this.setState({ data }); if (msg) this.toast(msg); return true; }
     this.toast('Sem espaço para salvar. Tente fotos menores ou exclua peças vendidas.');
     return false;
+  }
+  isMediaFile(f) { return /^image\//.test(f.type || '') || /^video\//.test(f.type || '') || /\.(hei[cf]|jpe?g|png|webp|gif|mp4|mov|m4v|webm)$/i.test(f.name || ''); }
+  async addMediaFiles(files) {
+    const list = Array.from(files || []).filter(f => this.isMediaFile(f));
+    if (!list.length || !this.state.draft) return;
+    const vids = list.filter(f => /^video\//.test(f.type || '') || /\.(mp4|mov|m4v|webm)$/i.test(f.name || ''));
+    const imgs = list.filter(f => !vids.includes(f));
+    if (imgs.length) {
+      if (this.state.uploading) this.toast('Espere as fotos atuais terminarem de enviar.');
+      else { const r = await this.readImgs(imgs); if (r.length) this.setState(x => x.draft ? { draft: { ...x.draft, images: [...x.draft.images, ...r] } } : null); }
+    }
+    for (const f of vids) {
+      if (!this.state.draft) break;
+      if ((this.state.draft.videos || []).length >= 3) { this.toast('Cada peça pode ter até 3 vídeos.'); break; }
+      if (this.state.vidPct >= 0) { this.toast('Espere o vídeo atual terminar de enviar.'); break; }
+      const url = await this.readVideo(f);
+      if (url) this.setState(x => x.draft ? { draft: { ...x.draft, videos: [...(x.draft.videos || []), url] } } : null);
+    }
   }
   async readVideo(file) {
     const m = this.m;
@@ -893,6 +925,11 @@ class Component extends DCLogic {
       videoHint: 'Até 3 vídeos por peça · máx. ' + (m ? m.MAX_VIDEO_MB : 50) + ' MB cada · de preferência MP4',
       addVideo: async e => { const f = (e.target.files || [])[0]; e.target.value = ''; if (st.vidPct >= 0) return; const url = await this.readVideo(f); if (url) this.setState(x => x.draft ? { draft: { ...x.draft, videos: [...(x.draft.videos || []), url] } } : null); },
       settingsLabel: st.uploading ? 'Aguarde a foto…' : st.saving ? 'Salvando…' : 'Salvar alterações',
+      fileHover: !!st.fileHover,
+      fileEnter: e => { if (this.dragFrom != null || !Array.from(e.dataTransfer.types || []).includes('Files')) return; e.preventDefault(); this.fileDepth = (this.fileDepth || 0) + 1; if (!st.fileHover) this.setState({ fileHover: true }); },
+      fileOver: e => { if (this.dragFrom != null || !Array.from(e.dataTransfer.types || []).includes('Files')) return; e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy'; } catch (x) {} },
+      fileLeave: () => { if (this.dragFrom != null) return; this.fileDepth = Math.max(0, (this.fileDepth || 0) - 1); if (!this.fileDepth && st.fileHover) this.setState({ fileHover: false }); },
+      fileDrop: e => { if (this.dragFrom != null) return; e.preventDefault(); this.fileDepth = 0; this.setState({ fileHover: false }); this.addMediaFiles(e.dataTransfer.files); },
       addImgs: async e => { const files = Array.from(e.target.files || []); e.target.value = ''; const r = await this.readImgs(files); if (r.length) this.setState(x => x.draft ? { draft: { ...x.draft, images: [...x.draft.images, ...r] } } : null); },
       saveDraft, closeDraft: () => { if ((st.uploading || st.vidPct >= 0) && !confirm('As fotos ainda estão sendo enviadas. Fechar mesmo assim?')) return; this.setState({ draft: null }); }, stop: e => e.stopPropagation(), formErr: st.formErr,
       groups,
