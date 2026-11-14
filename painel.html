@@ -502,6 +502,8 @@ class Component extends DCLogic {
     window.addEventListener('resize', this.onResize);
     this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft && !this.state.uploading) this.setState({ draft: null }); };
     window.addEventListener('keydown', this.onKey);
+    this.onStorage = e => { if (e.key === 'isa-admin-session' && this.m.remote) { const on = !!this.m.getSession(); if (on !== this.state.authed) this.setState({ authed: on }); } };
+    window.addEventListener('storage', this.onStorage);
   }
   componentWillUnmount() { window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); }
   componentDidUpdate() { document.body.style.overflow = (this.state.draft || this.state.adj) ? 'hidden' : ''; }
@@ -510,7 +512,7 @@ class Component extends DCLogic {
     if (!this.m || !this.m.remote || !this.m.getSession()) return;
     this.setState({ statsState: 'loading' });
     try { const stats = await this.m.fetchStats(period); if (this.state.period === period) this.setState({ stats, statsState: 'ok' }); }
-    catch (e) { if (e.message === 'sessao') this.expired(); else this.setState({ stats: null, statsState: 'err' }); }
+    catch (e) { if (e.message === 'sessao' && !this.m.getSession()) this.expired(); else { if (e.detail) console.error('Estatísticas:', e.detail); this.setState({ stats: null, statsState: 'err' }); } }
   }
   expired() {
     this.m.clearSession();
@@ -526,6 +528,7 @@ class Component extends DCLogic {
         this.setState({ saving: false });
         if (e.message === 'sessao') this.expired();
         else if (e.message === 'rede') this.toast('Sem conexão com a internet agora. Nada foi salvo — tente de novo em instantes.');
+        else if (e.message === 'negado') { console.error('Permissão negada', e.detail); this.toast('O Supabase recusou a gravação (permissão da tabela "loja"). Confira as políticas do LEIA-ME.'); }
         else { console.error('Erro ao salvar', e.detail || e); this.toast('Não foi possível salvar online' + (e.detail ? ': ' + e.detail : '. Tente de novo.')); }
         return false;
       }
@@ -548,7 +551,7 @@ class Component extends DCLogic {
           const url = await this.m.compressImage(list[k]);
           out[k] = this.m.remote ? await this.m.uploadImage(url) : url;
         } catch (e) {
-          if (e.message === 'sessao') lost = true;
+          if (e.message === 'sessao' && !this.m.getSession()) lost = true;
           fails.push(e.message);
           console.error('Falha ao enviar foto', list[k] && list[k].name, e.detail || e);
         }
@@ -560,7 +563,7 @@ class Component extends DCLogic {
     if (lost) this.expired();
     else if (fails.length) {
       const why = fails.includes('formato') ? ' O formato não é aceito (fotos HEIC do iPhone): salve como JPG e tente de novo.'
-        : fails.includes('rede') ? ' A internet caiu no meio do envio — tente de novo.' : ' Tente enviar de novo.';
+        : fails.includes('rede') ? ' A internet caiu no meio do envio — tente de novo.' : fails.includes('negado') ? ' O Supabase recusou o envio (permissão do bucket "fotos"). Confira as políticas do LEIA-ME.' : ' Tente enviar de novo.';
       this.toast((fails.length === 1 ? '1 foto não foi enviada.' : fails.length + ' fotos não foram enviadas.') + why);
     }
     return out.filter(Boolean);
@@ -670,7 +673,12 @@ class Component extends DCLogic {
       status: p.status, dot: sOf(p.status).c,
       hasStats: statsOk, cliques: num(ps(p.id).cliques), sacola: num(ps(p.id).sacola),
       age: p.status === 'vendido' && p.soldAt ? 'vendida em ' + new Date(p.soldAt).toLocaleDateString('pt-BR') : ago(p.createdAt),
-      setStatus: e => this.commit({ ...d, products: products.map(x => x.id === p.id ? withSale(x, e.target.value) : x) }, e.target.value === 'vendido' ? 'Venda registrada! ✦' : 'Status atualizado.'),
+      setStatus: e => {
+        const sel = e.target, v = sel.value;
+        if (st.saving) { sel.value = p.status; return this.toast('Aguarde, ainda salvando a alteração anterior…'); }
+        const msg = v === 'vendido' ? 'Venda registrada! ✦' : p.status === 'vendido' && v === 'disponivel' ? 'A peça voltou para a loja como disponível.' : 'Status atualizado.';
+        this.commit({ ...d, products: products.map(x => x.id === p.id ? withSale(x, v) : x) }, msg).then(ok => { if (!ok) sel.value = p.status; });
+      },
       edit: () => edit(p),
       remove: () => { if (confirm('Excluir "' + p.name + '"? Isso não pode ser desfeito.')) this.commit({ ...d, products: products.filter(x => x.id !== p.id) }, 'Peça excluída.'); }
     }));

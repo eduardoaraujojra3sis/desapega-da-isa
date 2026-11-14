@@ -129,8 +129,16 @@ function refreshToken() {
     let r;
     try { r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) }); }
     catch (e) { throw new Error('rede'); }
-    if (!r.ok) { clearSession(); throw new Error('sessao'); }
-    const j = await r.json(); setSession(j); return j.access_token;
+    if (r.ok) { const j = await r.json(); setSession(j); return j.access_token; }
+    if (r.status >= 500) throw new Error('rede');
+    // Outra aba pode estar renovando a sessão no mesmo instante: espera um pouco e usa a sessão nova em vez de sair.
+    for (let i = 0; i < 8; i++) {
+      const now = getSession();
+      if (now && now.refresh_token !== s.refresh_token) return now.access_token;
+      await new Promise(res => setTimeout(res, 400));
+    }
+    clearSession();
+    throw new Error('sessao');
   })().finally(() => { refreshing = null; });
   return refreshing;
 }
@@ -140,19 +148,24 @@ async function token(force) {
   if (force || !s.expires_at || s.expires_at * 1000 - Date.now() < 120000) return refreshToken();
   return s.access_token;
 }
+// Só é problema de login quando a resposta fala do token (vencido/inválido).
+// "permission denied" (falta de permissão no banco) NÃO desloga — vira erro 'negado'.
 async function isAuthErr(r) {
-  if (r.status === 401 || r.status === 403) return true;
-  if (r.status === 400) { try { return /jwt|unauthori[sz]ed|token/i.test(await r.clone().text()); } catch (e) {} }
-  return false;
+  if (r.status !== 401 && r.status !== 403 && r.status !== 400) return false;
+  let t = '';
+  try { t = await r.clone().text(); } catch (e) {}
+  if (/42501|permission denied|row-level security/i.test(t)) return false;
+  if (r.status === 401) return true;
+  return /jwt|expired|invalid.*token|token.*invalid|PGRST30[0-9]|signature/i.test(t);
 }
-// Faz a chamada com o token; se o token tiver vencido, renova e tenta de novo uma vez.
 async function authed(doFetch) {
   const run = async t => { try { return await doFetch(t); } catch (e) { throw new Error('rede'); } };
   let r = await run(await token());
   if (await isAuthErr(r)) {
     r = await run(await token(true));
-    if (await isAuthErr(r)) { clearSession(); throw new Error('sessao'); }
+    if (await isAuthErr(r)) { const e = new Error('negado'); try { e.detail = (await r.clone().text()).slice(0, 160); } catch (x) {} throw e; }
   }
+  if (r.status === 401 || r.status === 403) { const e = new Error('negado'); try { e.detail = (await r.clone().text()).slice(0, 160); } catch (x) {} throw e; }
   return r;
 }
 
