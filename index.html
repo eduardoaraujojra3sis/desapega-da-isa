@@ -161,7 +161,7 @@ button,select,input{font-family:inherit}
                 <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 12px,#E3D1B9 12px 24px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#6B5646;">foto da peça</div>
               </sc-if>
               <sc-if value="{{ c.hasVideo }}">
-                <span style="position:absolute;left:16px;bottom:16px;display:inline-flex;align-items:center;gap:6px;background:rgba(43,29,20,.82);color:#FBF6EE;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:6px 11px;border-radius:999px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Vídeo</span>
+                <span onClick="{{ c.openVideo }}" title="Ver vídeo" style="cursor:pointer;position:absolute;left:16px;bottom:16px;display:inline-flex;align-items:center;gap:6px;background:rgba(43,29,20,.82);color:#FBF6EE;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:6px 11px;border-radius:999px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Vídeo</span>
               </sc-if>
               <div style="position:absolute;inset:8px;border:1px dashed rgba(251,246,238,.7);border-radius:4px;pointer-events:none;"></div>
               <sc-if value="{{ c.hasBadge }}">
@@ -265,7 +265,19 @@ button,select,input{font-family:inherit}
           <div style="padding:clamp(12px,2vw,24px);display:flex;flex-direction:column;gap:10px;">
             <div style="position:relative;aspect-ratio:4/5;background:#EADCC8;border-radius:8px;overflow:hidden;">
               <sc-if value="{{ hasMain }}"><img src="{{ mainImg }}" alt="{{ p.name }}" style="width:100%;height:100%;object-fit:cover;display:block;{{ mainStyle }}"></sc-if>
-              <sc-if value="{{ hasVid }}"><video src="{{ mainVid }}" controls="{{ true }}" playsinline="{{ true }}" preload="metadata" style="width:100%;height:100%;object-fit:contain;display:block;background:#2B1D14;"></video></sc-if>
+              <sc-if value="{{ hasVid }}">
+                <video data-main-video="1" src="{{ mainVid }}" muted="{{ vidMuted }}" autoplay="{{ true }}" loop="{{ true }}" playsinline="{{ true }}" controls="{{ true }}" preload="auto" style="width:100%;height:100%;object-fit:contain;display:block;background:#2B1D14;"></video>
+                <button onClick="{{ toggleSound }}" aria-label="{{ soundLabel }}" style="position:absolute;right:12px;bottom:64px;z-index:2;display:inline-flex;align-items:center;gap:8px;background:rgba(43,29,20,.85);color:#FBF6EE;border:0;border-radius:999px;padding:9px 14px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;">
+                  <sc-if value="{{ vidMuted }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6"/><path d="m17 9 6 6"/></svg></sc-if>
+                  <sc-if value="{{ vidSound }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></sc-if>
+                  {{ soundLabel }}
+                </button>
+              </sc-if>
+              <sc-if value="{{ showVidBtn }}">
+                <button onClick="{{ goVid }}" style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:2;display:inline-flex;align-items:center;gap:10px;background:rgba(43,29,20,.88);color:#FBF6EE;border:0;border-radius:999px;padding:12px 20px 12px 14px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 24px rgba(43,29,20,.3);white-space:nowrap;" style-hover="background:#8B4A2B">
+                  <span style="width:28px;height:28px;border-radius:50%;background:#FBF6EE;color:#2B1D14;display:inline-flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></span>{{ vidBtnLabel }}
+                </button>
+              </sc-if>
               <sc-if value="{{ noMain }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#EADCC8 0 12px,#E3D1B9 12px 24px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#6B5646;">fotos da peça</div></sc-if>
               <sc-if value="{{ hasThumbs }}">
                 <button onClick="{{ prevImg }}" aria-label="Anterior" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(245,237,225,.92);border:0;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#2B1D14;">
@@ -282,7 +294,7 @@ button,select,input{font-family:inherit}
                 <sc-for list="{{ thumbs }}" as="t">
                   <button onClick="{{ t.pick }}" style="flex:none;width:64px;height:80px;padding:0;position:relative;border:2px solid {{ t.border }};border-radius:6px;overflow:hidden;background:#EADCC8;cursor:pointer;opacity:{{ t.opacity }};">
                     <sc-if value="{{ t.isImg }}"><img src="{{ t.src }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;{{ t.style }}"></sc-if>
-                    <sc-if value="{{ t.isVid }}"><span style="position:relative;display:block;width:100%;height:100%;"><video src="{{ t.vsrc }}" muted="{{ true }}" playsinline="{{ true }}" preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></video><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(43,29,20,.35);color:#FBF6EE;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></span></span></sc-if>
+                    <sc-if value="{{ t.isVid }}"><span style="position:relative;display:block;width:100%;height:100%;"><video src="{{ t.vsrc }}" muted="{{ true }}" playsinline="{{ true }}" preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"></video><span style="position:absolute;inset:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;background:rgba(43,29,20,.45);color:#FBF6EE;font-size:9px;font-weight:700;letter-spacing:.12em;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>VÍDEO</span></span></sc-if>
                   </button>
                 </sc-for>
               </div>
@@ -433,7 +445,15 @@ class Component extends DCLogic {
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('hashchange', this.onHash);
   }
-  componentDidUpdate() { document.body.style.overflow = (this.state.openId || this.state.cartOpen) ? 'hidden' : ''; }
+  componentDidUpdate() {
+    document.body.style.overflow = (this.state.openId || this.state.cartOpen) ? 'hidden' : '';
+    const v = document.querySelector('video[data-main-video]');
+    if (v && v.paused && v.dataset.tried !== v.getAttribute('src')) {
+      v.dataset.tried = v.getAttribute('src');
+      v.muted = this.state.vidMuted !== false;
+      v.play().catch(() => { v.muted = true; this.setState({ vidMuted: true }); v.play().catch(() => {}); });
+    }
+  }
   setCart(cart) { this.setState({ cart }); this.m && this.m.saveCart(cart); }
   flash(t) { this.setState({ toast: t }); clearTimeout(this.tt); this.tt = setTimeout(() => this.setState({ toast: '' }), 2400); }
   renderVals() {
@@ -462,15 +482,18 @@ class Component extends DCLogic {
         name: p.name, brand: p.brand, meta: ['Tam. ' + p.size, p.condition].filter(Boolean).join(' · '),
         price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, off: offLabel(p), priceColor: dc(p) ? '#8B4A2B' : '#2B1D14', imgStyle: adj(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p) && !(p.videos || []).length, coverVid: !cover(p) && (p.videos || [])[0] ? p.videos[0] + '#t=0.1' : '', hasVideo: (p.videos || []).length > 0,
         hasBadge: !!si, badge: si ? si[0] : '', badgeColor: si ? si[1] : '', opacity: p.status === 'vendido' ? 0.55 : 1,
-        open: () => { this.setState({ openId: p.id, img: 0 }); m && m.track([{ tipo: 'clique', produto: p.id }]); }
+        openVideo: e => { e.stopPropagation(); this.setState({ openId: p.id, img: 0, vidMuted: true }); m && m.track([{ tipo: 'clique', produto: p.id }]); },
+        open: () => { this.setState({ openId: p.id, img: 0, vidMuted: true }); m && m.track([{ tipo: 'clique', produto: p.id }]); }
       };
     });
     const avail = pub.filter(p => p.status === 'disponivel').length;
     const op = products.find(x => x.id === st.openId);
-    const media = op ? [...(op.images || []).map(src => ({ t: 'img', src })), ...(op.videos || []).map(src => ({ t: 'vid', src }))] : [];
+    const media = op ? [...(op.videos || []).map(src => ({ t: 'vid', src })), ...(op.images || []).map(src => ({ t: 'img', src }))] : [];
     const imgs = media;
     const idx = media.length ? Math.min(st.img, media.length - 1) : 0;
     const cur = media[idx];
+    const firstVid = media.findIndex(x => x.t === 'vid');
+    const nVids = media.filter(x => x.t === 'vid').length;
     const inCart = op && st.cart.includes(op.id);
     let btnLabel = 'Quero essa!', btnAction = () => { m.track([{ tipo: 'sacola', produto: op.id }]); this.setCart([...st.cart, op.id]); this.setState({ openId: null }); this.flash('Foi pra sacola!'); }, btnDisabled = false;
     if (op && op.status === 'vendido') { btnLabel = 'Já foi vendida'; btnDisabled = true; }
@@ -509,7 +532,11 @@ class Component extends DCLogic {
       hasOpen: !!op, closeProduct: () => this.setState({ openId: null }), stop: e => e.stopPropagation(),
       modalPad: mobile ? '0' : '32px', modalH: mobile ? '100%' : 'auto', modalRadius: mobile ? '0' : 'var(--radius-lg)', closePos: mobile ? 'fixed' : 'absolute',
       p: op ? { name: op.name, brand: op.brand, priceStr: brl(fp(op)), oldPrice: brl(op.price), hasOff: dc(op) > 0, off: offLabel(op), priceColor: dc(op) ? '#8B4A2B' : '#2B1D14', description: op.description, hasStatus: !!osi, statusLabel: osi ? osi[0] : '', statusColor: osi ? osi[1] : '' } : {},
-      mainImg: cur && cur.t === 'img' ? cur.src : '', mainStyle: cur && cur.t === 'img' ? adj(op, cur.src) : '', hasMain: !!cur && cur.t === 'img', hasVid: !!cur && cur.t === 'vid', mainVid: cur && cur.t === 'vid' ? cur.src : '', noMain: !cur,
+      mainImg: cur && cur.t === 'img' ? cur.src : '', mainStyle: cur && cur.t === 'img' ? adj(op, cur.src) : '', hasMain: !!cur && cur.t === 'img', hasVid: !!cur && cur.t === 'vid', mainVid: cur && cur.t === 'vid' ? cur.src : '', vidMuted: st.vidMuted !== false, vidSound: st.vidMuted === false,
+      soundLabel: st.vidMuted === false ? 'Som ligado' : 'Ativar som',
+      toggleSound: e => { e.stopPropagation(); const v = document.querySelector('video[data-main-video]'); const muted = st.vidMuted === false; if (v) { v.muted = muted; if (!muted) v.play().catch(() => {}); } this.setState({ vidMuted: muted }); },
+      showVidBtn: firstVid >= 0 && !!cur && cur.t !== 'vid', vidBtnLabel: nVids > 1 ? 'Ver vídeos (' + nVids + ')' : 'Ver vídeo',
+      goVid: e => { e.stopPropagation(); this.setState({ img: firstVid }); }, noMain: !cur,
       hasThumbs: imgs.length > 1, imgCounter: (idx + 1) + ' / ' + imgs.length,
       thumbs: media.map((x, i) => ({ src: x.src, vsrc: x.src + '#t=0.1', isImg: x.t === 'img', isVid: x.t === 'vid', style: x.t === 'img' ? adj(op, x.src) : '', border: i === idx ? '#8B4A2B' : 'transparent', opacity: i === idx ? 1 : 0.7, pick: () => this.setState({ img: i }) })),
       prevImg: e => { e.stopPropagation(); this.setState({ img: (idx - 1 + imgs.length) % imgs.length }); },
