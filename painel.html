@@ -285,7 +285,7 @@
                 <h1>Configurações</h1>
                 <p>Textos, fotos, contato, categorias e tamanhos.</p>
               </div>
-              <button onClick="{{ saveSettings }}" class="btn btn-primary" style="min-height:46px;padding:10px 22px;font-size:14px;">Salvar alterações</button>
+              <button onClick="{{ saveSettings }}" disabled="{{ saveBlocked }}" class="btn btn-primary" style="min-height:46px;padding:10px 22px;font-size:14px;">{{ settingsLabel }}</button>
             </div>
 
             <div class="card">
@@ -404,7 +404,7 @@
           <span style="font-size:13px;color:#9A3B2A;font-weight:600;">{{ formErr }}</span>
           <div style="display:flex;gap:8px;margin-left:auto;">
             <button onClick="{{ closeDraft }}" class="btn" style="min-height:46px;">Cancelar</button>
-            <button onClick="{{ saveDraft }}" class="btn btn-primary" style="min-height:46px;padding:10px 24px;font-size:14px;">Salvar peça</button>
+            <button onClick="{{ saveDraft }}" disabled="{{ saveBlocked }}" class="btn btn-primary" style="min-height:46px;padding:10px 24px;font-size:14px;">{{ saveLabel }}</button>
           </div>
         </div>
       </div>
@@ -488,55 +488,84 @@ const pct = (a, b) => b ? (a / b * 100).toLocaleString('pt-BR', { maximumFractio
 const ago = t => { if (!t) return ''; const d = Math.floor((Date.now() - t) / DAY); return d <= 0 ? 'no ar desde hoje' : d === 1 ? 'no ar há 1 dia' : 'no ar há ' + d + ' dias'; };
 
 class Component extends DCLogic {
-  state = { data: null, authed: sessionStorage.getItem('isa-admin-ok') === '1' || !!sessionStorage.getItem('isa-admin-token'), token: sessionStorage.getItem('isa-admin-token') || '', email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
+  state = { data: null, authed: false, saving: false, upDone: 0, email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
   async componentDidMount() {
     this.m = await import(new URL('data.js', document.baseURI).href);
-    if (this.m.remote && !this.state.token) { sessionStorage.removeItem('isa-admin-ok'); this.setState({ authed: false }); }
-    if (!this.m.remote && !sessionStorage.getItem('isa-admin-ok')) this.setState({ authed: false });
+    sessionStorage.removeItem('isa-admin-token');
+    const authed = this.m.remote ? !!this.m.getSession() : sessionStorage.getItem('isa-admin-ok') === '1';
+    this.setState({ authed });
     const data = this.m.remote ? (this.m.cached() || this.m.load()) : this.m.load();
     this.setState({ data, sd: JSON.parse(JSON.stringify(data.settings)) });
     if (this.m.remote) this.m.fetchRemote().then(d => d && this.setState({ data: d, sd: JSON.parse(JSON.stringify(d.settings)) })).catch(() => this.toast('Não consegui carregar os dados online. Confira a conexão.'));
-    if (this.state.authed) { this.m.markAdmin(); this.loadStats(this.state.period); }
+    if (authed) { this.m.markAdmin(); this.loadStats(this.state.period); }
     this.onResize = () => this.setState({ w: window.innerWidth });
     window.addEventListener('resize', this.onResize);
-    this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft) this.setState({ draft: null }); };
+    this.onKey = e => { if (e.key !== 'Escape') return; if (this.state.adj) this.setState({ adj: null }); else if (this.state.draft && !this.state.uploading) this.setState({ draft: null }); };
     window.addEventListener('keydown', this.onKey);
   }
   componentWillUnmount() { window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); }
   componentDidUpdate() { document.body.style.overflow = (this.state.draft || this.state.adj) ? 'hidden' : ''; }
   toast(t) { this.setState({ flash: t }); clearTimeout(this.ft); this.ft = setTimeout(() => this.setState({ flash: '' }), 2800); }
   async loadStats(period) {
-    if (!this.m || !this.m.remote || !this.state.token) return;
+    if (!this.m || !this.m.remote || !this.m.getSession()) return;
     this.setState({ statsState: 'loading' });
-    try { const stats = await this.m.fetchStats(period, this.state.token); if (this.state.period === period) this.setState({ stats, statsState: 'ok' }); }
+    try { const stats = await this.m.fetchStats(period); if (this.state.period === period) this.setState({ stats, statsState: 'ok' }); }
     catch (e) { if (e.message === 'sessao') this.expired(); else this.setState({ stats: null, statsState: 'err' }); }
   }
   expired() {
-    sessionStorage.removeItem('isa-admin-token');
-    this.setState({ authed: false, token: '', draft: null });
-    this.toast('Sua sessão expirou. Entre de novo para continuar.');
+    this.m.clearSession();
+    this.setState({ authed: false, draft: null, adj: null, saving: false });
+    this.toast('Sua sessão terminou. Entre de novo para continuar — nada do que já estava salvo foi perdido.');
   }
   async commit(data, msg) {
     if (this.m.remote) {
-      try { await this.m.saveRemote(data, this.state.token); this.setState({ data }); if (msg) this.toast(msg); return true; }
-      catch (e) { if (e.message === 'sessao') this.expired(); else this.toast('Não foi possível salvar online. Tente de novo.'); return false; }
+      if (this.state.saving) return false;
+      this.setState({ saving: true });
+      try { await this.m.saveRemote(data); this.setState({ data, saving: false }); if (msg) this.toast(msg); return true; }
+      catch (e) {
+        this.setState({ saving: false });
+        if (e.message === 'sessao') this.expired();
+        else if (e.message === 'rede') this.toast('Sem conexão com a internet agora. Nada foi salvo — tente de novo em instantes.');
+        else { console.error('Erro ao salvar', e.detail || e); this.toast('Não foi possível salvar online' + (e.detail ? ': ' + e.detail : '. Tente de novo.')); }
+        return false;
+      }
     }
     if (this.m.save(data)) { this.setState({ data }); if (msg) this.toast(msg); return true; }
     this.toast('Sem espaço para salvar. Tente fotos menores ou exclua peças vendidas.');
     return false;
   }
   async readImgs(files) {
-    this.setState({ uploading: true });
-    const out = [];
-    for (const f of Array.from(files || [])) {
-      try {
-        const url = await this.m.compressImage(f);
-        out.push(this.m.remote ? await this.m.uploadImage(url, this.state.token) : url);
-      } catch (e) { if (e.message === 'sessao') { this.expired(); break; } this.toast('Uma foto não pôde ser enviada.'); }
+    const list = Array.from(files || []);
+    if (!list.length) return [];
+    this.setState({ uploading: list.length, upDone: 0 });
+    const out = new Array(list.length);
+    const fails = [];
+    let next = 0, lost = false;
+    const worker = async () => {
+      while (next < list.length && !lost) {
+        const k = next++;
+        try {
+          const url = await this.m.compressImage(list[k]);
+          out[k] = this.m.remote ? await this.m.uploadImage(url) : url;
+        } catch (e) {
+          if (e.message === 'sessao') lost = true;
+          fails.push(e.message);
+          console.error('Falha ao enviar foto', list[k] && list[k].name, e.detail || e);
+        }
+        this.setState(x => ({ upDone: x.upDone + 1 }));
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    this.setState({ uploading: 0, upDone: 0 });
+    if (lost) this.expired();
+    else if (fails.length) {
+      const why = fails.includes('formato') ? ' O formato não é aceito (fotos HEIC do iPhone): salve como JPG e tente de novo.'
+        : fails.includes('rede') ? ' A internet caiu no meio do envio — tente de novo.' : ' Tente enviar de novo.';
+      this.toast((fails.length === 1 ? '1 foto não foi enviada.' : fails.length + ' fotos não foram enviadas.') + why);
     }
-    this.setState({ uploading: false });
-    return out;
+    return out.filter(Boolean);
   }
+
   renderVals() {
     const st = this.state, d = st.data, m = this.m;
     const s = d ? d.settings : {};
@@ -679,6 +708,8 @@ class Component extends DCLogic {
       remove: () => setD('images', imgs.filter((_, j) => j !== i))
     }));
     const saveDraft = () => {
+      if (st.uploading) return this.setState({ formErr: 'Espere as fotos terminarem de enviar.' });
+      if (st.saving) return;
       const price = parseFloat(String(dr.price).replace(',', '.'));
       if (!dr.name.trim()) return this.setState({ formErr: 'Dá um nome pra peça.' });
       if (!isFinite(price)) return this.setState({ formErr: 'Coloca um preço válido.' });
@@ -710,7 +741,7 @@ class Component extends DCLogic {
     };
     const groups = [
       { title: 'Identidade', desc: 'Nome da loja e a faixa de aviso no topo.', fields: [field(sd, setS, 'storeName', 'Nome da loja', 'text'), field(sd, setS, 'announcement', 'Faixa de aviso', 'text', { full: true })], images: [], lists: [] },
-      { title: 'Contato', desc: 'Para onde vão os pedidos.', fields: [field(sd, setS, 'whatsapp', 'WhatsApp', 'text', { hint: 'Com 55 + DDD, só números. Ex.: 5563985157647' }), field(sd, setS, 'instagram', 'Instagram', 'text', { ph: '@seuperfil' })], images: [], lists: [] },
+      { title: 'Contato', desc: 'Para onde vão os pedidos.', fields: [field(sd, setS, 'whatsapp', 'WhatsApp', 'text', { hint: 'Com 55 + DDD, só números. Ex.: 5563985157647' }), field(sd, setS, 'instagram', 'Instagram', 'text', { ph: '@seuperfil', hint: 'Pode escrever @perfil ou colar o link do perfil.' })], images: [], lists: [] },
       { title: 'Capa', desc: 'O primeiro bloco da loja.', fields: [field(sd, setS, 'heroEyebrow', 'Chamada pequena', 'text'), field(sd, setS, 'heroTitle', 'Título', 'text', { full: true }), field(sd, setS, 'heroText', 'Texto', 'area', { full: true })], images: [img('heroImage', 'Foto da capa')], lists: [] },
       { title: 'Quem é a Isa', desc: 'Sua apresentação.', fields: [field(sd, setS, 'aboutTitle', 'Título', 'text', { full: true }), field(sd, setS, 'aboutText', 'Texto', 'area', { full: true })], images: [img('aboutImage', 'Seu retrato')], lists: [] },
       { title: 'Pedido no WhatsApp', desc: 'A mensagem que a cliente envia, com a lista de peças logo abaixo.', fields: [field(sd, setS, 'messageIntro', 'Abertura da mensagem', 'area', { full: true }), field(sd, setS, 'checkoutNote', 'Aviso na sacola', 'text', { full: true })], images: [], lists: [] },
@@ -757,13 +788,13 @@ class Component extends DCLogic {
         if (st.busy) return;
         if (m.remote) {
           this.setState({ busy: true });
-          try { const token = await m.signIn(st.email.trim(), st.pw); sessionStorage.setItem('isa-admin-token', token); m.markAdmin(); this.setState({ authed: true, token, pw: '', busy: false }, () => this.loadStats(this.state.period)); }
+          try { await m.signIn(st.email.trim(), st.pw); m.markAdmin(); this.setState({ authed: true, pw: '', busy: false }, () => this.loadStats(this.state.period)); }
           catch (x) { this.setState({ pwErr: LOGIN_MSGS[x.message] || ('Não deu para entrar: ' + (x.detail || x.message)), busy: false }); }
           return;
         }
         if (st.pw === s.password) { sessionStorage.setItem('isa-admin-ok', '1'); m.markAdmin(); this.setState({ authed: true, pw: '' }); } else this.setState({ pwErr: 'Senha incorreta. Tenta de novo?' });
       },
-      logout: () => { sessionStorage.removeItem('isa-admin-ok'); sessionStorage.removeItem('isa-admin-token'); this.setState({ authed: false, token: '', stats: null, statsState: 'idle' }); },
+      logout: () => { sessionStorage.removeItem('isa-admin-ok'); if (m.remote) m.clearSession(); this.setState({ authed: false, stats: null, statsState: 'idle' }); },
       nav, tabDash: st.tab === 'dash', tabPecas: st.tab === 'pecas', tabLoja: st.tab === 'loja',
 
       greeting: (h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite') + ', Isa ✦',
@@ -785,11 +816,13 @@ class Component extends DCLogic {
       statusOpts: statuses.map(x => ({ v: x.v, l: x.l })),
       newProduct: () => this.setState({ formErr: '', draft: { id: m.uid(), code: m.nextCode(products), name: '', brand: '', category: (s.categories || [])[0] || '', size: (s.sizes || [])[0] || '', condition: 'Seminova', price: '', discount: '', soldPrice: '', measures: '', description: '', status: 'disponivel', images: [], createdAt: Date.now() } }),
       hasDraft: !!dr, draftTitle: dr && products.some(x => x.id === dr.id) ? 'Editar peça' : 'Nova peça', draftCode: dr ? 'Código ' + dr.code : '',
-      draftFields, draftImgs, uploadLabel: st.uploading ? 'Enviando…' : 'Adicionar fotos',
-      addImgs: async e => { const r = await this.readImgs(e.target.files); e.target.value = ''; this.setState(x => ({ draft: { ...x.draft, images: [...x.draft.images, ...r] } })); },
-      saveDraft, closeDraft: () => this.setState({ draft: null }), stop: e => e.stopPropagation(), formErr: st.formErr,
+      draftFields, draftImgs, uploadLabel: st.uploading ? 'Enviando ' + Math.min(st.upDone + 1, st.uploading) + ' de ' + st.uploading + '…' : 'Adicionar fotos',
+      saveLabel: st.uploading ? 'Aguarde as fotos…' : st.saving ? 'Salvando…' : 'Salvar peça', saveBlocked: !!st.uploading || st.saving,
+      settingsLabel: st.uploading ? 'Aguarde a foto…' : st.saving ? 'Salvando…' : 'Salvar alterações',
+      addImgs: async e => { const files = Array.from(e.target.files || []); e.target.value = ''; const r = await this.readImgs(files); if (r.length) this.setState(x => x.draft ? { draft: { ...x.draft, images: [...x.draft.images, ...r] } } : null); },
+      saveDraft, closeDraft: () => { if (st.uploading && !confirm('As fotos ainda estão sendo enviadas. Fechar mesmo assim?')) return; this.setState({ draft: null }); }, stop: e => e.stopPropagation(), formErr: st.formErr,
       groups,
-      saveSettings: () => { if (!m.remote && !sd.password) return this.toast('A senha não pode ficar vazia.'); this.commit({ ...d, settings: sd }, 'Salvo! Já está na loja.'); },
+      saveSettings: () => { if (st.uploading || st.saving) return; if (!m.remote && !sd.password) return this.toast('A senha não pode ficar vazia.'); this.commit({ ...d, settings: sd }, 'Salvo! Já está na loja.'); },
       exportData: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(d)], { type: 'application/json' })); a.download = 'desapega-da-isa-backup.json'; a.click(); },
       importData: e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { const nd = JSON.parse(r.result); if (!nd.products || !nd.settings) throw 0; this.commit(nd, 'Backup restaurado.'); this.setState({ sd: nd.settings }); } catch (x) { this.toast('Arquivo de backup inválido.'); } }; r.readAsText(f); e.target.value = ''; },
       flash: st.flash, hasFlash: !!st.flash

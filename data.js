@@ -8,7 +8,7 @@ const settings = {
   storeName: 'Desapega da Isa',
   announcement: 'Peças únicas · quem viu primeiro, levou · Envio para todo o Brasil',
   whatsapp: '5563985157647',
-  instagram: '@desapegadaisa',
+  instagram: '@isamramos_',
   heroEyebrow: 'O closet tá aberto!',
   heroTitle: 'Amei muito. Agora é a sua vez de amar.',
   heroText: 'Abri meu armário e separei as queridinhas que merecem uma nova dona. Cada peça é única — gostou, joga na sacola e corre pro meu WhatsApp antes que alguém leve!',
@@ -75,13 +75,13 @@ export function nextCode(products) {
   return 'DI-' + String(n).padStart(3, '0');
 }
 
-export function compressImage(file, max = 1600, q = 0.85) {
+export function compressImage(file, max = 1500, q = 0.8) {
   return new Promise((res, rej) => {
     const r = new FileReader();
-    r.onerror = rej;
+    r.onerror = () => rej(new Error('leitura'));
     r.onload = () => {
       const img = new Image();
-      img.onerror = rej;
+      img.onerror = () => rej(new Error('formato'));
       img.onload = () => {
         const k = Math.min(1, max / Math.max(img.width, img.height));
         const c = document.createElement('canvas');
@@ -109,11 +109,64 @@ export async function fetchRemote() {
   return d;
 }
 
-export async function saveRemote(d, token) {
+// ---------- Sessão da Isa (renova sozinha antes de expirar) ----------
+const SESSION = 'isa-admin-session';
+export function getSession() { try { return JSON.parse(localStorage.getItem(SESSION) || 'null'); } catch (e) { return null; } }
+function setSession(j) {
+  try {
+    if (!j) return localStorage.removeItem(SESSION);
+    localStorage.setItem(SESSION, JSON.stringify({ access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at || Math.floor(Date.now() / 1000) + (j.expires_in || 3600) }));
+  } catch (e) {}
+}
+export function clearSession() { setSession(null); }
+
+let refreshing = null;
+function refreshToken() {
+  if (refreshing) return refreshing;
+  refreshing = (async () => {
+    const s = getSession();
+    if (!s || !s.refresh_token) throw new Error('sessao');
+    let r;
+    try { r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) }); }
+    catch (e) { throw new Error('rede'); }
+    if (!r.ok) { clearSession(); throw new Error('sessao'); }
+    const j = await r.json(); setSession(j); return j.access_token;
+  })().finally(() => { refreshing = null; });
+  return refreshing;
+}
+async function token(force) {
+  const s = getSession();
+  if (!s) throw new Error('sessao');
+  if (force || !s.expires_at || s.expires_at * 1000 - Date.now() < 120000) return refreshToken();
+  return s.access_token;
+}
+async function isAuthErr(r) {
+  if (r.status === 401 || r.status === 403) return true;
+  if (r.status === 400) { try { return /jwt|unauthori[sz]ed|token/i.test(await r.clone().text()); } catch (e) {} }
+  return false;
+}
+// Faz a chamada com o token; se o token tiver vencido, renova e tenta de novo uma vez.
+async function authed(doFetch) {
+  const run = async t => { try { return await doFetch(t); } catch (e) { throw new Error('rede'); } };
+  let r = await run(await token());
+  if (await isAuthErr(r)) {
+    r = await run(await token(true));
+    if (await isAuthErr(r)) { clearSession(); throw new Error('sessao'); }
+  }
+  return r;
+}
+
+export async function saveRemote(d) {
   const clean = { ...d, settings: { ...d.settings, password: '' } };
-  const r = await fetch(SUPABASE_URL + '/rest/v1/loja', { method: 'POST', headers: { ...H(token), Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ id: 1, dados: clean }) });
-  if (r.status === 401) throw new Error('sessao');
-  if (!r.ok) throw new Error(await r.text());
+  const body = JSON.stringify({ id: 1, dados: clean });
+  let r;
+  try { r = await authed(t => fetch(SUPABASE_URL + '/rest/v1/loja', { method: 'POST', headers: { ...H(t), Prefer: 'resolution=merge-duplicates,return=minimal' }, body })); }
+  catch (e) {
+    if (e.message !== 'rede') throw e;
+    await new Promise(res => setTimeout(res, 1500));
+    r = await authed(t => fetch(SUPABASE_URL + '/rest/v1/loja', { method: 'POST', headers: { ...H(t), Prefer: 'resolution=merge-duplicates,return=minimal' }, body }));
+  }
+  if (!r.ok) { const err = new Error('salvar'); err.detail = (await r.text()).slice(0, 160); throw err; }
   save(d);
 }
 
@@ -124,7 +177,7 @@ export async function signIn(email, password) {
   try {
     r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
   } catch (e) { throw new Error('rede'); }
-  if (r.ok) return (await r.json()).access_token;
+  if (r.ok) { const j = await r.json(); setSession(j); return j.access_token; }
   let body = {};
   try { body = await r.json(); } catch (e) {}
   const code = String(body.error_code || body.code || '');
@@ -136,12 +189,11 @@ export async function signIn(email, password) {
   throw err;
 }
 
-export async function uploadImage(dataURL, token) {
+export async function uploadImage(dataURL) {
   const blob = await (await fetch(dataURL)).blob();
   const name = Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '.jpg';
-  const r = await fetch(SUPABASE_URL + '/storage/v1/object/fotos/' + name, { method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: blob });
-  if (r.status === 401) throw new Error('sessao');
-  if (!r.ok) throw new Error('upload');
+  const r = await authed(t => fetch(SUPABASE_URL + '/storage/v1/object/fotos/' + name, { method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + t, 'Content-Type': 'image/jpeg' }, body: blob }));
+  if (!r.ok) { const err = new Error('upload'); err.detail = (await r.text()).slice(0, 160); throw err; }
   return SUPABASE_URL + '/storage/v1/object/public/fotos/' + name;
 }
 
@@ -163,10 +215,9 @@ export function track(events) {
   } catch (e) {}
 }
 
-export async function fetchStats(days, token) {
+export async function fetchStats(days) {
   const desde = new Date(Date.now() - days * 86400000).toISOString();
-  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/painel_resumo', { method: 'POST', headers: H(token), body: JSON.stringify({ desde }) });
-  if (r.status === 401) throw new Error('sessao');
+  const r = await authed(t => fetch(SUPABASE_URL + '/rest/v1/rpc/painel_resumo', { method: 'POST', headers: H(t), body: JSON.stringify({ desde }) }));
   if (!r.ok) throw new Error('stats');
   const d = await r.json();
   return { por_dia: (d && d.por_dia) || [], por_peca: (d && d.por_peca) || [] };
@@ -195,4 +246,12 @@ export function imgStyle(adj) {
   const x = Math.min(100, Math.max(0, Number(adj.x ?? 50)));
   const y = Math.min(100, Math.max(0, Number(adj.y ?? 50)));
   return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;`;
+}
+
+// Aceita "@perfil", "perfil" ou o link completo do Instagram (com ?utm... etc.)
+export function igHandle(v) {
+  let s = String(v || '').trim();
+  const m = s.match(/instagram\.com\/([^/?#\s]+)/i);
+  if (m) s = m[1];
+  return s.replace(/^@/, '').trim();
 }

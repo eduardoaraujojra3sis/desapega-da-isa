@@ -231,7 +231,7 @@ button,select,input{font-family:inherit}
         <span style="font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:#8B4A2B;">— ✦ A Isa</span>
         <h2 style="font-family:'Playfair Display',serif;font-weight:400;font-style:italic;font-size:clamp(42px,5vw,72px);line-height:1;margin:0;">{{ s.aboutTitle }}</h2>
         <p style="margin:0;font-size:17px;line-height:1.8;color:#5A4636;text-wrap:pretty;">{{ s.aboutText }}</p>
-        <a href="{{ igUrl }}" target="_blank" rel="noopener" style="align-self:flex-start;display:inline-block;white-space:nowrap;padding:14px 24px;border-radius:999px;border:1px solid #2B1D14;font-size:13px;font-weight:700;letter-spacing:.12em;" style-hover="background:#2B1D14;color:#F5EDE1">Segue lá: {{ s.instagram }}</a>
+        <a href="{{ igUrl }}" target="_blank" rel="noopener" style="align-self:flex-start;display:inline-block;white-space:nowrap;padding:14px 24px;border-radius:999px;border:1px solid #2B1D14;font-size:13px;font-weight:700;letter-spacing:.12em;" style-hover="background:#2B1D14;color:#F5EDE1">Segue lá: @{{ igName }}</a>
       </div>
     </div>
   </section>
@@ -469,7 +469,7 @@ class Component extends DCLogic {
     const osi = op ? statusInfo(op) : null;
     const items = st.cart.map(id => products.find(p => p.id === id)).filter(Boolean);
     const total = items.reduce((a, p) => a + fp(p), 0);
-    const ig = (s.instagram || '').replace('@', '').trim();
+    const ig = m ? m.igHandle(s.instagram) : '';
     const checkout = () => {
       const photo = p => { const u = m.sitePhoto(cover(p)); return u ? `\n   Foto: ${u}` : ''; };
       const lines = items.map((p, i) => `${i + 1}. *${p.name}*${p.brand ? ' (' + p.brand + ')' : ''} · Tam. ${p.size} · ${brl(fp(p))}${dc(p) ? ' (de ' + brl(p.price) + ', ' + offLabel(p) + ')' : ''} · cód. ${p.code}${photo(p)}`);
@@ -511,7 +511,7 @@ class Component extends DCLogic {
       cartItems: items.map(p => ({ name: p.name, brand: p.brand, meta: 'Tam. ' + p.size + ' · ' + p.code, price: brl(fp(p)), oldPrice: brl(p.price), hasOff: dc(p) > 0, style: adj(p, cover(p)), cover: cover(p), hasCover: !!cover(p), noCover: !cover(p), remove: () => this.setCart(st.cart.filter(x => x !== p.id)) })),
       totalStr: brl(total), name: st.name, onName: e => this.setState({ name: e.target.value }), checkout,
       toast: st.toast, hasToast: !!st.toast,
-      igUrl: 'https://instagram.com/' + ig, waUrl: m ? m.waLink(s.whatsapp, 'Oi, Isa! Vim pelo Desapega.') : '#'
+      igName: ig, igUrl: 'https://www.instagram.com/' + ig + '/', waUrl: m ? m.waLink(s.whatsapp, 'Oi, Isa! Vim pelo Desapega.') : '#'
     };
   }
 }
