@@ -140,6 +140,7 @@ button,select,input{font-family:inherit}
           </label>
           <label style="display:flex;align-items:center;gap:8px;">Ordenar
             <select value="{{ sort }}" onChange="{{ onSort }}" style="appearance:none;-webkit-appearance:none;background:#FBF6EE;border:1px solid #D9C6AC;border-radius:999px;padding:8px 18px;font-size:13px;color:#2B1D14;cursor:pointer;">
+              <option value="destaques">Destaques</option>
               <option value="recentes">Mais recentes</option>
               <option value="menor">Menor preço</option>
               <option value="maior">Maior preço</option>
@@ -402,7 +403,7 @@ button,select,input{font-family:inherit}
 import { DCLogic, mount } from './dc-lite.js';
 
 class Component extends DCLogic {
-  state = { data: null, cart: [], cat: 'Todas', size: 'Todos', sort: 'recentes', openId: null, img: 0, cartOpen: false, name: '', w: window.innerWidth, toast: '', veil: 'on' };
+  state = { data: null, cart: [], cat: 'Todas', size: 'Todos', sort: 'destaques', openId: null, img: 0, cartOpen: false, name: '', w: window.innerWidth, toast: '', veil: 'on' };
   async componentDidMount() {
     this.m = await import(new URL('data.js', document.baseURI).href);
     const apply = data => {
@@ -490,8 +491,9 @@ class Component extends DCLogic {
       return { label: c, bg: on ? '#2B1D14' : 'transparent', color: on ? '#F5EDE1' : '#2B1D14', border: on ? '#2B1D14' : '#CDB79A', pick: () => { if (c === 'Todas') this.goHome(true); else this.goCat(c); } };
     });
     const rank = p => p.status === 'vendido' ? 2 : p.status === 'reservado' ? 1 : 0;
-    const list = pub.filter(p => (st.cat === 'Todas' || p.category === st.cat) && (st.size === 'Todos' || p.size === st.size))
-      .sort((a, b) => rank(a) - rank(b) || (st.sort === 'menor' ? fp(a) - fp(b) : st.sort === 'maior' ? fp(b) - fp(a) : (b.createdAt || 0) - (a.createdAt || 0)));
+    const filtered = pub.filter(p => (st.cat === 'Todas' || p.category === st.cat) && (st.size === 'Todos' || p.size === st.size));
+    const list = st.sort === 'destaques' && m ? m.showcaseOrder(filtered, s, st.cat === 'Todas')
+      : filtered.sort((a, b) => rank(a) - rank(b) || (st.sort === 'menor' ? fp(a) - fp(b) : st.sort === 'maior' ? fp(b) - fp(a) : (b.createdAt || 0) - (a.createdAt || 0)));
     const cards = list.map(p => {
       const si = statusInfo(p);
       return {

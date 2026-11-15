@@ -233,9 +233,47 @@
                 <h1>Suas peças</h1>
                 <p>Tudo que você mudar aqui aparece na loja na hora.</p>
               </div>
-              <button onClick="{{ newProduct }}" class="btn btn-primary" style="min-height:46px;padding:10px 22px;font-size:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Nova peça</button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button onClick="{{ toggleOrganize }}" class="btn" style="min-height:46px;padding:10px 18px;font-size:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>{{ organizeLabel }}</button>
+                <button onClick="{{ newProduct }}" class="btn btn-primary" style="min-height:46px;padding:10px 22px;font-size:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Nova peça</button>
+              </div>
             </div>
 
+            <sc-if value="{{ organizing }}">
+              <div class="card">
+                <div class="card-pad" style="display:flex;flex-direction:column;gap:16px;border-bottom:1px solid var(--line);">
+                  <div class="card-head" style="margin:0;"><h2>Ordem da vitrine</h2><span>Como as peças aparecem na aba "Todas" da loja</span></div>
+                  <div class="ord-options">
+                    <label class="ord-opt {{ ordMixCls }}"><input type="radio" name="ordem" checked="{{ ordMix }}" onChange="{{ pickMix }}"><span><b>Misturar categorias automaticamente</b><small>A loja espalha as peças para nunca ficar, por exemplo, calça do lado de calça. Peças novas entram sozinhas.</small></span></label>
+                    <label class="ord-opt {{ ordManualCls }}"><input type="radio" name="ordem" checked="{{ ordManual }}" onChange="{{ pickManual }}"><span><b>Do jeito que eu organizar</b><small>Arraste as peças ou use as setas. Peças novas aparecem no começo até você reorganizar.</small></span></label>
+                  </div>
+                </div>
+                <div class="org-list">
+                  <sc-for list="{{ orgRows }}" as="o">
+                    <div class="org-row {{ o.dropCls }}" draggable="true" onDragStart="{{ o.dragStart }}" onDragOver="{{ o.dragOver }}" onDragLeave="{{ o.dragLeave }}" onDrop="{{ o.drop }}" onDragEnd="{{ orgDragEnd }}">
+                      <span class="org-handle" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+                      <span class="org-pos">{{ o.pos }}</span>
+                      <div class="thumb"><sc-if value="{{ o.cover }}"><img src="{{ o.cover }}" alt="" draggable="false" style="{{ o.style }}"></sc-if><sc-if value="{{ o.noCover }}"><div class="thumb-empty"></div></sc-if></div>
+                      <div class="org-info"><b>{{ o.name }}</b><small><span class="pill" style="padding:2px 8px;">{{ o.category }}</span> {{ o.extra }}</small></div>
+                      <div class="org-btns">
+                        <button onClick="{{ o.top }}" disabled="{{ o.first }}" title="Levar para o começo" aria-label="Levar para o começo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14"/><path d="m6 14 6-6 6 6"/><path d="M12 8v12"/></svg></button>
+                        <button onClick="{{ o.up }}" disabled="{{ o.first }}" title="Subir" aria-label="Subir"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></button>
+                        <button onClick="{{ o.down }}" disabled="{{ o.last }}" title="Descer" aria-label="Descer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ orgEmpty }}"><div class="empty">Nenhuma peça visível na loja.</div></sc-if>
+                </div>
+                <div class="modal-foot" style="border-radius:0 0 var(--radius) var(--radius);">
+                  <span style="font-size:13px;color:var(--muted);">{{ orgHint }}</span>
+                  <div style="display:flex;gap:8px;margin-left:auto;">
+                    <button onClick="{{ toggleOrganize }}" class="btn" style="min-height:44px;">Cancelar</button>
+                    <button onClick="{{ saveOrder }}" disabled="{{ saving }}" class="btn btn-primary" style="min-height:44px;padding:10px 22px;">Salvar ordem</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ notOrganizing }}">
             <div class="toolbar">
               <div class="chips">
                 <sc-for list="{{ filters }}" as="f">
@@ -278,6 +316,7 @@
               </sc-for>
               <sc-if value="{{ noRows }}"><div class="empty" style="padding:56px 16px;">{{ noRowsText }}</div></sc-if>
             </div>
+            </sc-if>
           </sc-if>
 
           <!-- ============ CONFIGURAÇÕES ============ -->
@@ -529,7 +568,7 @@ const pct = (a, b) => b ? (a / b * 100).toLocaleString('pt-BR', { maximumFractio
 const ago = t => { if (!t) return ''; const d = Math.floor((Date.now() - t) / DAY); return d <= 0 ? 'no ar desde hoje' : d === 1 ? 'no ar há 1 dia' : 'no ar há ' + d + ' dias'; };
 
 class Component extends DCLogic {
-  state = { data: null, authed: false, saving: false, upDone: 0, vidPct: -1, dropAt: -1, email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
+  state = { data: null, authed: false, saving: false, upDone: 0, vidPct: -1, dropAt: -1, org: null, orgDrop: -1, email: '', busy: false, pw: '', pwErr: '', tab: 'dash', q: '', fStatus: 'todos', draft: null, sd: null, formErr: '', flash: '', w: window.innerWidth, uploading: false, inputs: {}, period: 30, stats: null, statsState: 'idle', hover: -1, adj: null };
   async componentDidMount() {
     this.m = await import(new URL('data.js', document.baseURI).href);
     sessionStorage.removeItem('isa-admin-token');
@@ -886,6 +925,48 @@ class Component extends DCLogic {
       { title: 'Segurança', desc: 'Senha para entrar neste painel.', fields: [field(sd, setS, 'password', 'Senha do painel', 'text')], images: [], lists: [] }
     ].filter(g => !(m && m.remote && g.title === 'Segurança'));
 
+    // ---------- organizar vitrine ----------
+    const visible = products.filter(p => p.status !== 'oculto');
+    const O = st.org;
+    const mv = (arr, from, to) => { const a = [...arr]; const [x] = a.splice(from, 1); a.splice(to, 0, x); return a; };
+    const setIds = ids => this.setState(x => ({ org: { ...x.org, ids, mode: 'manual' } }));
+    const byId = Object.fromEntries(products.map(p => [p.id, p]));
+    const orgVals = {
+      organizing: !!O, notOrganizing: !O, organizeLabel: O ? 'Fechar organização' : 'Organizar vitrine', saving: st.saving,
+      toggleOrganize: () => {
+        if (O) return this.setState({ org: null });
+        const mode = s.homeOrder === 'manual' ? 'manual' : 'mix';
+        this.setState({ org: { mode, ids: m.showcaseOrder(visible, { homeOrder: mode }, true).map(p => p.id) } });
+      },
+      ordMix: !!O && O.mode === 'mix', ordManual: !!O && O.mode === 'manual',
+      ordMixCls: O && O.mode === 'mix' ? 'on' : '', ordManualCls: O && O.mode === 'manual' ? 'on' : '',
+      pickMix: () => this.setState({ org: { mode: 'mix', ids: m.showcaseOrder(visible, { homeOrder: 'mix' }, true).map(p => p.id) } }),
+      pickManual: () => this.setState(x => ({ org: { ...x.org, mode: 'manual' } })),
+      orgHint: O && O.mode === 'mix' ? 'Prévia da mistura automática. Mexeu em alguma peça? Vira a sua ordem.' : 'Arraste pelo ⋮⋮ ou use as setas. A loja muda ao salvar.',
+      orgEmpty: !!O && !O.ids.length,
+      orgDragEnd: () => { this.orgFrom = null; if (st.orgDrop !== -1) this.setState({ orgDrop: -1 }); },
+      orgRows: O ? O.ids.filter(id => byId[id]).map((id, i, ids) => {
+        const p = byId[id];
+        return {
+          pos: (i + 1) + 'º', name: p.name, category: p.category || 'Sem categoria',
+          extra: p.status === 'vendido' ? '· vendida (fica no fim)' : p.status === 'reservado' ? '· reservada' : '',
+          cover: (p.images || [])[0] ? m.thumbOf(p, p.images[0]) : '', noCover: !(p.images || [])[0], style: ist(p, (p.images || [])[0]),
+          first: i === 0, last: i === ids.length - 1,
+          top: () => setIds(mv(ids, i, 0)), up: () => setIds(mv(ids, i, i - 1)), down: () => setIds(mv(ids, i, i + 1)),
+          dropCls: st.orgDrop === i && this.orgFrom !== i ? 'drop-here' : '',
+          dragStart: e => { this.orgFrom = i; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (x) {} },
+          dragOver: e => { if (this.orgFrom == null) return; e.preventDefault(); if (st.orgDrop !== i) this.setState({ orgDrop: i }); },
+          dragLeave: () => { if (st.orgDrop === i) this.setState({ orgDrop: -1 }); },
+          drop: e => { e.preventDefault(); const from = this.orgFrom; this.orgFrom = null; this.setState({ orgDrop: -1 }); if (from != null && from !== i) setIds(mv(ids, from, i)); }
+        };
+      }) : [],
+      saveOrder: () => {
+        if (!O) return;
+        const pos = Object.fromEntries(O.ids.map((id, i) => [id, i]));
+        const next = { ...d, settings: { ...s, homeOrder: O.mode }, products: products.map(p => pos[p.id] != null ? { ...p, order: pos[p.id] } : p) };
+        this.commit(next, O.mode === 'mix' ? 'Pronto! A vitrine vai misturar as categorias sozinha.' : 'Ordem da vitrine salva!').then(ok => { if (ok) this.setState({ org: null, sd: JSON.parse(JSON.stringify(next.settings)) }); });
+      }
+    };
     const A = st.adj;
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const setA = o => this.setState(x => ({ adj: { ...x.adj, ...o } }));
@@ -913,6 +994,7 @@ class Component extends DCLogic {
     } : { hasAdj: false };
 
     return {
+      ...orgVals,
       ...adjVals,
       optLabel: st.opt ? 'Otimizando as fotos para a loja carregar mais rápido… ' + st.opt.done + ' de ' + st.opt.total + ' (pode continuar usando o painel)' : '',
       loading: !d, storeName: s.storeName || 'Desapega da Isa',

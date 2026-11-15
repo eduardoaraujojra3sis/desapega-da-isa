@@ -337,3 +337,42 @@ export async function uploadThumbFor(fullUrl, srcForThumb) {
   if (!r.ok && !/already exists|Duplicate|409/i.test(await r.text())) throw new Error('upload');
   return SUPABASE_URL + '/storage/v1/object/public/fotos/' + name;
 }
+
+// ---------- Ordem da vitrine ----------
+// settings.homeOrder: 'mix' (mistura as categorias automaticamente) | 'manual' (ordem escolhida no painel)
+const statusRank = p => p.status === 'vendido' ? 2 : p.status === 'reservado' ? 1 : 0;
+const byRecent = (a, b) => (b.createdAt || 0) - (a.createdAt || 0);
+const byManual = (a, b) => {
+  const oa = Number.isFinite(a.order) ? a.order : null, ob = Number.isFinite(b.order) ? b.order : null;
+  if (oa !== null && ob !== null) return oa - ob;
+  if (oa === null && ob === null) return byRecent(a, b);
+  return oa === null ? -1 : 1; // peças novas sem posição aparecem primeiro
+};
+// Espalha as categorias: nunca duas iguais lado a lado quando dá pra evitar.
+export function mixCategories(arr, startPrev = null) {
+  const queues = new Map();
+  arr.forEach(p => { const k = p.category || ''; if (!queues.has(k)) queues.set(k, []); queues.get(k).push(p); });
+  const out = [];
+  let prev = startPrev;
+  while (out.length < arr.length) {
+    let best = null;
+    for (const [k, q] of queues) {
+      if (!q.length || (k === prev && queues.size > 1)) continue;
+      if (!best || q.length > best[1].length || (q.length === best[1].length && arr.indexOf(q[0]) < arr.indexOf(best[1][0]))) best = [k, q];
+    }
+    if (!best) for (const [k, q] of queues) if (q.length) { best = [k, q]; break; }
+    out.push(best[1].shift());
+    prev = best[0];
+    if (!best[1].length) queues.delete(best[0]);
+  }
+  return out;
+}
+// Ordem padrão ("Destaques"). mix=true só na aba "Todas".
+export function showcaseOrder(list, settings, mix) {
+  const manual = (settings && settings.homeOrder) === 'manual';
+  const groups = [0, 1, 2].map(r => list.filter(p => statusRank(p) === r).sort(manual ? byManual : byRecent));
+  if (manual || !mix) return groups.flat();
+  const out = [];
+  groups.forEach(g => out.push(...mixCategories(g, out.length ? out[out.length - 1].category || '' : null)));
+  return out;
+}
